@@ -58,6 +58,7 @@ needed for the optional comparison commands; see the [reference](docs/REFERENCE.
 | --- | --- |
 | [C assertion examples](examples/checks/checks.c) | Five universal Lean proofs, including selected inserted safety checks |
 | [Instrumented fill](examples/arrays/Spec/CheckedFill.lean) | Unbounded safety, filled contents, byte framing, and termination |
+| [Fill's caller](examples/arrays/Spec/Caller.lean) | Every value: four local ints, checked endpoints, correct return, released storage; certified underfill failure |
 | [Seven array contracts](examples/arrays/Spec.lean) | Universal proofs over raw translations; six still await universal proofs of imported checks |
 | [12 bug/repair pairs](examples/violations/README.md) | Named violations certified in Lean; repairs checked by CBMC and concrete Lean executions |
 

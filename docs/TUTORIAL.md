@@ -107,3 +107,9 @@ Try an edit next. [FILL_EDITS.md](../examples/arrays/FILL_EDITS.md) records whic
 small edits preserved the proof, which needed local repairs, and which introduced
 a rejected bug. The other six instrumented array algorithms still need universal
 proofs; their existing raw-translation proofs do not establish the added checks.
+
+To see a caller establish those memory premises, read [caller.c](../examples/arrays/caller.c)
+and its [short contract](../examples/arrays/Spec/Caller.lean). It allocates four local ints,
+calls fill and checks both endpoints, for every input value without assumptions.
+The adjacent bug fills only three elements of a zero-initialized array; input 1
+reaches its named assertion failure. Both claims are checked by the same array workflow.

@@ -10,7 +10,7 @@ make status      # reject a receipt whose current inputs/artifacts no longer mat
 The shared runner is `tools/verification.py`, using only Python's standard library.
 Each example's short `verification.json` is reviewed policy: compilation/check
 flags, entries and reachable callee coverage, expected property counts by function
-and category, proof modules, named claims and scope labels. It does not discover
+and category, proof modules, expected statement types, named claims and scope labels. It does not discover
 what the user intended to verify.
 
 ## What is bound
@@ -35,7 +35,11 @@ disabled safety flag therefore cannot silently reduce this expected coverage.
 
 `generate` clears an older receipt and compiles the captured input; `check`
 validates that generation, builds/checks the proof modules, resolves/audits the
-named declarations and rechecks inputs before writing `result.json`. Failure
+named declarations against their expected types and rechecks inputs before writing `result.json`.
+Each generated wrapper has the form `def certified : ExpectedStatement := ProofName`;
+its type comes from reviewed policy, never from the proof's inferred type. A theorem
+of the wrong statement is rejected. Direct Lean checks use one thread and a
+1 GiB Lean memory limit; subprocesses have a 120-second timeout. Failure
 leaves no new successful receipt. Proof edits can be checked without retranslating
 unchanged C:
 
@@ -56,7 +60,8 @@ local identity. Use one generation/check writer per example at a time.
 
 Scopes are explicit: `unbounded`, `execution`, or `counterexample`. Checked fill
 has unbounded safety/completion claims; the other six checked array entries have
-concrete execution claims. **Scope labels come from policy, not inference from
+concrete execution claims. The four-element caller additionally proves its contract
+for every value and has a certified buggy counterpart. **Scope labels come from policy, not inference from
 the theorem's type.** Named declarations are actually compiled, resolved and
 axiom-audited, but reviewing whether their statements justify the label and
 entry association remains necessary.
@@ -79,4 +84,5 @@ See [the confidence review](CONFIDENCE.md) for remaining semantic trust boundari
 
 `tests/verification.py` exercises positive issuance and rejection of stale
 source/headers/configuration/entry/ABI, changed tools/artifacts/proofs, missing
-assertions, disabled instrumentation and nonexistent claims. It is part of CTest.
+assertions, disabled instrumentation, nonexistent claims and proofs of the wrong
+statement. It is part of CTest.

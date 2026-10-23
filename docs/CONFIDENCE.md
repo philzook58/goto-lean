@@ -152,7 +152,10 @@ implemented. Receipts detect stale/mismatched inputs and missing expected checks
 reviewed scope labels and category counts do not prove specification adequacy or
 translation correspondence. The remaining work is proposed, in this order:
 
-1. **One real caller proof.** Start with allocating an array and calling checked
+1. **Broaden caller coverage.** The four-element caller in `examples/arrays/caller.c`
+   now establishes checked fill's premises and proves its source assertion for every
+   input value, with a certified underfill failure. Extend beyond its fixed capacity
+   and empty initial modeled memory. Start with allocating an array and calling checked
    fill. Discharge its readable-array, nonwrapping and metadata premises; check
    the resulting C assertions. Require feasible positive controls and intended
    negative controls. Contradictory assumptions must never count as a returned case.

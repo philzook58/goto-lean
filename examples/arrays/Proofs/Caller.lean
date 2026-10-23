@@ -111,24 +111,37 @@ private theorem returned (value : BitVec 32) (after : Memory)
   simp [v_fill_local.finish, choose, check, Action.wp, Memory.release,
     Memory.bytes, Memory.setGlobal, pointer, Pointer.object, Pointer.make, shiftLeft_eq]
 
+private def resume (value : BitVec 32) (bits : BitVec 128) :
+    v_fill_local.Value → Action v_fill_local.Activation
+  | .v_fill (_, after) =>
+    pure (.v_fill_local (.b2, { v_a := pointer, v_value := value, memory := after }))
+  | _ => do
+    check "fill_local: GOTO 43; caller.c:6; internal return type" false
+    pure (.v_fill_local (.b2, { v_a := pointer, v_value := value, memory := allocated bits }))
+
+-- Check the allocation block with an abstract continuation, without unfolding the loop.
+private theorem entry_wp (value : BitVec 32) (Q : Next v_fill_local.Frame v_fill_local.Output → Prop) :
+    (v_fill_local.step (v_fill_local.initial value)).wp Q ↔
+    ∀ bits, Q (.inl (.v_fill
+      (v_fill_local.Functions.v_fill.initial pointer 4 value (allocated bits)),
+      [resume value bits])) := by
+  unfold resume
+  simp [v_fill_local.step, callStep, v_fill_local.initial,
+    v_fill_local.Functions.v_fill_local.initial, v_fill_local.body, Bind.bind,
+    Action.wp_bind, Action.wp_pure, Memory.alloc, choose, check, Action.wp,
+    v_fill_local.offsetBits, v_fill_local.objectBits, pointer, allocated,
+    Pointer.add, Pointer.make, Pointer.object, shiftLeft_eq]
+  rfl
+
 /-- The actual C caller establishes fill's memory premises and completes for every input value. -/
 theorem implements : CallerSpec.fill_local := by
   intro value
   refine ⟨14, ?_⟩
-  change (v_fill_local.step (v_fill_local.initial value)).wp _
-  simp only [v_fill_local.step, callStep, v_fill_local.initial,
-    v_fill_local.Functions.v_fill_local.initial, v_fill_local.body, Bind.bind,
-    Action.wp_bind, Action.wp_pure, Memory.alloc, choose, check, Action.wp,
-    v_fill_local.offsetBits, v_fill_local.objectBits]
+  rw [finishes, entry_wp]
   intro bits
-  refine ⟨by simp, ?_⟩
-  change finishes v_fill_local.step 13 _ _
-  change finishes v_fill_local.step (12+1)
-    (.v_fill (v_fill_local.Functions.v_fill.initial pointer 4 value (allocated bits)), _) _
-  apply call_fill value bits
+  simp only [Sum.elim_inl]
+  apply call_fill value bits (resume value bits) 1
   intro after words
-  change finishes v_fill_local.step 1
-    (.v_fill_local (.b2, { v_value := value, v_a := pointer, memory := after }), []) _
   exact returned value after words
 
 /-- A reachable failure of the buggy caller's imported assertion on input 1. -/

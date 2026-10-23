@@ -14,7 +14,8 @@ WORK = Path('.lake/verification')
 
 
 def run(args, *, env=None):
-    result = subprocess.run(list(map(str, args)), env=env, capture_output=True, check=True)
+    result = subprocess.run(list(map(str, args)), env=env, capture_output=True, check=True,
+                            timeout=120)
     return result.stdout
 
 
@@ -165,14 +166,15 @@ def check(policy, config, tools, generated):
     for module in policy['proofs']:
         output = WORK / (module.replace('.', '/') + '.olean')
         output.parent.mkdir(parents=True, exist_ok=True)
-        run(['lake', 'env', 'lean', '-o', output, module.replace('.', '/') + '.lean'], env=env)
+        run(['lake', 'env', 'lean', '-j1', '-M1024', '-o', output,
+             module.replace('.', '/') + '.lean'], env=env)
     claims = [e['claim'] for e in policy['entries']]
     audit = '\n'.join('import ' + m for m in ['GotoLean.Audit', *policy['proofs']])
     for i, entry in enumerate(policy['entries']):
         audit += f"\ndef certified_{i} : {entry['statement']} := {entry['claim']}\n"
         audit += f'#check_axioms certified_{i}\n'
     (WORK / 'Audit.lean').write_text(audit)
-    run(['lake', 'env', 'lean', WORK / 'Audit.lean'], env=env)
+    run(['lake', 'env', 'lean', '-j1', '-M1024', WORK / 'Audit.lean'], env=env)
     validate(policy, config, tool_info(), generated)
     same(before, proof_inputs(), 'proof/model inputs during checking')
     save(WORK / 'result.json', {'kind': 'checked local receipt',
@@ -219,7 +221,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
+    except (ValueError, KeyError, OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
         if isinstance(error, subprocess.CalledProcessError):
             print(error.stdout.decode(errors='replace'), file=sys.stderr)
             print(error.stderr.decode(errors='replace'), file=sys.stderr)

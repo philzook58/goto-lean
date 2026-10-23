@@ -6,10 +6,18 @@ search, sorted-prefix scanning, rotation and bubble sort. Every entry now has
 a universal correctness and termination proof under its memory preconditions.
 No changes to the C++ printer were needed.
 
-The newer [`caller.c`](caller.c) experiment and its [contract](Spec/Caller.lean)
-are unfinished. Its [caller proof](Proofs/Caller.lean) last hit a kernel timeout;
-the latest repair has not been validated. It remains included in the checks,
-so a green CI result requires it to pass too.
+[`caller.c`](caller.c) creates four local ints and calls instrumented fill.
+Its [contract](Spec/Caller.lean) requires no input preconditions: every 32-bit
+value is returned, the endpoint assertion passes, and the local storage is released.
+The [proof](Proofs/Caller.lean) establishes fill's memory premises from allocation
+and reuses the general fill theorem. Its buggy counterpart fills only three ints;
+Lean certifies the named assertion failure on input 1. This caller has a fixed
+capacity of four; the separate fill theorem handles arbitrary admitted lengths.
+
+The allocation block is checked with an abstract continuation before composing
+the call. This avoids unfolding the whole execution during type comparison.
+A targeted check with `lean -j1 -M1024` passed in 2.53 seconds at 929,764 KiB peak
+RSS (imports alone: 752,948 KiB). Both public claims pass the axiom audit.
 
 ## Review without reading proofs
 
