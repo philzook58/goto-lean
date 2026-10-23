@@ -1,0 +1,10 @@
+name = "violationExamples"
+version = "0.1.0"
+defaultTargets = ["Generated"]
+
+[[require]]
+name = "gotoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "Generated"

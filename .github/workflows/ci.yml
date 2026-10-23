@@ -1,0 +1,61 @@
+name: Build and check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: ubuntu:24.04
+      options: --memory=4g --memory-swap=4g --cpus=1
+    defaults:
+      run:
+        shell: bash
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 1
+      CTEST_PARALLEL_LEVEL: 1
+      LEAN_NUM_THREADS: 1
+      MAKEFLAGS: -j1
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install build tools and CBMC
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends -y \
+            build-essential cmake ninja-build bison flex zlib1g-dev python3 curl patch git ca-certificates
+          curl --fail --location --retry 3 -o /tmp/cbmc.deb \
+            https://github.com/diffblue/cbmc/releases/download/cbmc-6.11.0/ubuntu-24.04-cbmc-6.11.0-Linux.deb
+          apt-get install -y /tmp/cbmc.deb
+          cbmc --version
+
+      - name: Install Lean from lean-toolchain
+        run: |
+          curl --fail --location --retry 3 -o /tmp/elan-init.sh \
+            https://elan.lean-lang.org/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target goto-lean-tools --parallel 1
+
+      # CTest regenerates ignored Lean from C before checking the handwritten proofs.
+      - name: Regenerate and check
+        run: |
+          ctest --test-dir build --parallel 1 --output-on-failure --no-tests=error

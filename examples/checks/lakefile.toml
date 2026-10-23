@@ -1,0 +1,13 @@
+name = "checkExamples"
+version = "0.1.0"
+defaultTargets = ["Proofs"]
+
+[[require]]
+name = "gotoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "Generated"
+
+[[lean_lib]]
+name = "Proofs"

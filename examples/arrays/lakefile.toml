@@ -1,0 +1,25 @@
+name = "arrayExamples"
+version = "0.1.0"
+defaultTargets = ["Verified", "Proofs.CheckedFill", "Proofs.Caller"]
+
+[[require]]
+name = "gotoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "Generated"
+
+[[lean_lib]]
+name = "Proofs"
+
+[[lean_lib]]
+name = "Entries"
+
+[[lean_lib]]
+name = "Spec"
+
+[[lean_lib]]
+name = "Verified"
+
+[[lean_lib]]
+name = "Checked"

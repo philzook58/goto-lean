@@ -1,0 +1,6 @@
+name = "gotoLean"
+version = "0.1.0"
+defaultTargets = ["GotoLean", "GotoLean.Audit"]
+
+[[lean_lib]]
+name = "GotoLean"

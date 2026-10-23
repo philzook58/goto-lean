@@ -1,0 +1,14 @@
+/build*/
+.lake/
+lake-manifest.json
+__pycache__/
+*.pyc
+*.olean*
+*.ilean
+*.gb
+a.out
+
+# Regenerated from C by the example Makefiles. Keep the handwritten import files.
+/examples/*/Generated/
+/examples/arrays/Checked/
+/play/mymax.lean

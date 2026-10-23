@@ -1,0 +1,41 @@
+{
+  "source": "checks.c",
+  "compile": ["-std=c11"],
+  "checks": ["--bounds-check", "--signed-overflow-check", "--div-by-zero-check", "--undefined-shift-check"],
+  "build": ["Proofs"],
+  "proofs": ["Proofs"],
+  "expected_properties": {
+    "checked_abs": {"overflow": 1, "assertion": 1},
+    "checked_add": {"overflow": 1, "assertion": 1},
+    "checked_divide": {"division-by-zero": 1, "overflow": 1, "assertion": 1},
+    "checked_index": {"array bounds": 1, "assertion": 1},
+    "checked_shift": {"undefined-shift": 1, "assertion": 1}
+  },
+  "entries": [
+    {"function": "checked_abs", "lean": "Generated/Abs.lean", "scope": "unbounded",
+     "claim": "CheckExamples.absolute",
+     "statement": "∀ (x : BitVec 32), GotoLean.finishes v_checked_abs.step 1 (v_checked_abs.initial x) (fun _ ↦ True)",
+     "summary": "Returns a nonnegative value; no signed overflow.",
+     "requires": "x != INT_MIN."},
+    {"function": "checked_index", "lean": "Generated/Index.lean", "scope": "unbounded",
+     "claim": "CheckExamples.indexing",
+     "statement": "∀ (i : BitVec 32), GotoLean.finishes v_checked_index.step 1 (v_checked_index.initial i) (fun _ ↦ True)",
+     "summary": "Returns a positive prime; array access is in bounds.",
+     "requires": "i < 4."},
+    {"function": "checked_divide", "lean": "Generated/Divide.lean", "scope": "unbounded",
+     "claim": "CheckExamples.division",
+     "statement": "∀ (x divisor : BitVec 32), GotoLean.finishes v_checked_divide.step 1 (v_checked_divide.initial x divisor) (fun _ ↦ True)",
+     "summary": "Division is safe; dividing by 1 returns x.",
+     "requires": "divisor != 0; exclude INT_MIN / -1."},
+    {"function": "checked_shift", "lean": "Generated/Shift.lean", "scope": "unbounded",
+     "claim": "CheckExamples.shifting",
+     "statement": "∀ (x distance : BitVec 32), GotoLean.finishes v_checked_shift.step 1 (v_checked_shift.initial x distance) (fun _ ↦ True)",
+     "summary": "Shift distance is valid; shifting by 0 returns x.",
+     "requires": "distance < 32."},
+    {"function": "checked_add", "lean": "Generated/Add.lean", "scope": "unbounded",
+     "claim": "CheckExamples.addition",
+     "statement": "∀ (x : BitVec 32), GotoLean.finishes v_checked_add.step 1 (v_checked_add.initial x) (fun _ ↦ True)",
+     "summary": "Returns a larger value; no signed overflow.",
+     "requires": "x < INT_MAX."}
+  ]
+}
