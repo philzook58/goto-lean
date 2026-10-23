@@ -752,7 +752,7 @@ struct Printer {
   std::string library_call(const Instruction &i) const {
     if (!i.is_function_call() || i.call_function().id() != ID_symbol || body_call(i)) return {};
     auto name = id2string(to_symbol_expr(i.call_function()).identifier());
-    return name == "memcpy" || name == "strlen" ? name : "";
+    return name == "memcpy" || name == "strlen" || name == "malloc" || name == "free" ? name : "";
   }
 
   std::vector<std::string> call_arguments(const Instruction &i, std::ostream &out, unsigned indent) {
@@ -771,6 +771,19 @@ struct Printer {
       fail("library result requires a local-symbol destination; normalize the GOTO call first");
     auto args = call_arguments(i, out, indent);
     const auto &ret = to_code_type(i.call_function().type()).return_type();
+    if (name == "malloc" || name == "free") {
+      if (args.size() != 1 || (name == "malloc" ?
+          (ret.id() != ID_pointer || i.call_arguments()[0].type().id() != ID_unsignedbv) :
+          (ret.id() != ID_empty || i.call_arguments()[0].type().id() != ID_pointer)))
+        fail("unsupported " + name + " signature");
+      auto tmp = fresh();
+      line(out, indent, "let " + tmp + " ← Memory." + name + " " + quote(site()) + " " +
+        offset_bits() + (name == "malloc" ? " objectBits" : "") + " s.memory " +
+        args[0] + (name == "malloc" ? ".toNat" : ""));
+      line(out, indent, "s := { s with memory := " + tmp + (name == "malloc" ? ".2" : "") + " }");
+      if (name == "malloc" && !i.call_lhs().is_nil()) assign(i.call_lhs(), tmp + ".1", out, indent);
+      return;
+    }
     if (args.size() != (name == "memcpy" ? 3u : 1u) ||
         i.call_arguments()[0].type().id() != ID_pointer)
       fail("unsupported " + name + " signature");

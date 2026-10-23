@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
+#define __CPROVER_assert(condition, message) assert(condition)
 #include "algorithms.c"
 
 /* One request per line: operation, length, argument, then the array elements. */

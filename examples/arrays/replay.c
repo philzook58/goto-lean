@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <assert.h>
+#define __CPROVER_assert(condition, message) assert(condition)
 #include "algorithms.c"
 
 /* Input: n, key, then n sorted ints. Output: index, then the reversed array. */

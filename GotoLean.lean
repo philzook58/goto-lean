@@ -4,3 +4,4 @@ import GotoLean.Aggregates
 import GotoLean.Memory
 import GotoLean.Calls
 import GotoLean.Library
+import GotoLean.Heap

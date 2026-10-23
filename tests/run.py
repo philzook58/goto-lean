@@ -223,11 +223,14 @@ open GotoLean
     bad_obj = work / 'unsupported.gb'
     run([args.goto_cc, '-c', ROOT / 'tests/unsupported.c', '-o', bad_obj])
     preserved = work / 'preserved.lean'
-    for name in ['floating', 'calls', 'indirect', 'global_address', 'missing']:
+    for name in ['floating', 'calls', 'indirect', 'global_address', 'missing',
+                 'parameter_address']:
         preserved.write_text('keep me\n')
         result = run([args.printer, bad_obj, '--function', name, '-o', preserved], ok=False)
         assert result.returncode == 2 and name in result.stderr, result
         assert preserved.read_text() == 'keep me\n'
+        if name == 'parameter_address':
+            assert 'address-taking of parameters' in result.stderr
     for name, expected in [('global_read', 0), ('global_write', 1),
                            ('global_roundtrip', 35), ('global_memory', 83),
                            ('statics', 1), ('static_roundtrip', 3)]:

@@ -7,6 +7,10 @@ import DeadBad
 import StoreParameter
 import CursorParameter
 import EscapeLocal
+import OffsetGood
+import OffsetBad
+import SeparateGood
+import SeparateBad
 import GotoLean.MemoryLemmas
 import GotoLean.MemoryViews
 
@@ -27,7 +31,7 @@ set_option experimental.vcgen true
 private def wordMemory : Memory := { objects := #[none, none, some #[0, 0, 0, 0]] }
 private def wordPointer : BitVec 64 := Pointer.make 56 2 0
 #guard (v_store_parameter.eval wordPointer 305419896 10 [] wordMemory).1 matches
-  .returned (305419896, { objects := #[none, none, some #[120, 86, 52, 18]], globals := [] })
+  .returned (305419896, { objects := #[none, none, some #[120, 86, 52, 18]], globals := [], heap := [] })
 
 private def cursorMemory : Memory :=
   { objects := #[none, none, some #[97, 98, 0], some (Memory.unpack wordPointer)] }
@@ -49,6 +53,45 @@ private def cursorPointer : BitVec 64 := Pointer.make 56 3 0
   | _ => false
 
 namespace MemoryProofs
+
+/-- Subtracting one element from an interior pointer returns the first element. -/
+theorem offset_execution : ∃ m,
+    Executes v_offset_good.step (v_offset_good.initial 1) (.returned (11, m)) := by
+  have h := evalLoop_exec v_offset_good.step (fun f ↦ reprStr f.1)
+    20 (v_offset_good.initial 1) [0, 0]
+  have evaluated : (evalLoop v_offset_good.step (fun f ↦ reprStr f.1)
+      20 (v_offset_good.initial 1) [0, 0]).1 =
+      .returned (11, { objects := #[none, none, none] }) := by decide +kernel
+  rw [evaluated] at h
+  exact ⟨_, h⟩
+
+/-- The distinct-object assertion succeeds after storing 9 through the other alias. -/
+theorem separate_execution : ∃ m,
+    Executes v_separate_good.step (v_separate_good.initial 9) (.returned (7, m)) := by
+  have h := evalLoop_exec v_separate_good.step (fun f ↦ reprStr f.1)
+    20 (v_separate_good.initial 9) [0, 0, 0]
+  have evaluated : (evalLoop v_separate_good.step (fun f ↦ reprStr f.1)
+      20 (v_separate_good.initial 9) [0, 0, 0]).1 =
+      .returned (7, { objects := #[none, none, none] }) := by decide +kernel
+  rw [evaluated] at h
+  exact ⟨_, h⟩
+
+/-- Moving before the array reaches a failed memory check and refutes model safety. -/
+theorem offset_counterexample :
+    (∃ site, Executes v_offset_bad.step v_offset_bad.initial (.assertionFailed site)) ∧
+    ¬ v_offset_bad.run.wp (fun _ ↦ True) := by
+  exact failure_refutes _ (fun f ↦ reprStr f.1) _ 20 [0, 0] (by decide +kernel) _
+
+/-- A false claim about another object is rejected even though all C accesses are valid. -/
+theorem separate_counterexample :
+    (∃ site, Executes v_separate_bad.step (v_separate_bad.initial 9) (.assertionFailed site)) ∧
+    ¬ (v_separate_bad.run 9).wp (fun _ ↦ True) := by
+  exact failure_refutes _ (fun f ↦ reprStr f.1) _ 20 [0, 0, 0] (by decide +kernel) _
+
+#check_axioms offset_execution
+#check_axioms separate_execution
+#check_axioms offset_counterexample
+#check_axioms separate_counterexample
 
 /-- The ordinary vcgen rule proves that any valid store preserves a distinct object. -/
 theorem store_frame (m : Memory) (offsetBits other : Nat) (p : BitVec pw)

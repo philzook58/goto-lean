@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Check shared-memory translation against native C and kernel-checked Lean proofs."""
 import ctypes
+import json
 import os
 from pathlib import Path
 import random
+import shutil
 import subprocess
 import sys
 
@@ -11,13 +13,15 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / 'build'
 WORK = BUILD / 'memory'
 WORK.mkdir(parents=True, exist_ok=True)
-ENV = dict(os.environ, LEAN_PATH=str(WORK))
+ENV = dict(os.environ, LEAN_PATH=str(WORK), LEAN_NUM_THREADS='1')
 
 
-def run(*args):
+def run(*args, code=0):
+    if args[:3] == ('lake', 'env', 'lean'):
+        args = (*args[:3], '-j1', '-M1024', *args[3:])
     result = subprocess.run(list(map(str, args)), cwd=ROOT, env=ENV,
                             capture_output=True, text=True, timeout=120)
-    if result.returncode:
+    if result.returncode != code:
         raise RuntimeError(f'{args}\n{result.stdout}{result.stderr}')
     return result.stdout
 
@@ -28,9 +32,12 @@ run(BUILD / 'bin/goto-cc', '-D__CPROVER__', '-c', 'tests/memory.c', '-o', WORK /
 cases = [('cursor_alias', 0, [0, 0, 0]), ('alias_local', 1, [0, 0]),
          ('alias_bytes', 1, [0, 0]), ('alias_member', 1, [0, 0]),
          ('alias_array', 2, [0, 0]), ('one_past', 0, [0, 0]),
-         ('backwards', 0, [0, 0]), ('distinct_objects', 0, [0, 0, 0])]
+         ('backwards', 0, [0, 0]), ('distinct_objects', 0, [0, 0, 0]),
+         ('offset_good', 1, [0, 0]), ('separate_good', 1, [0, 0, 0]),
+         ('heap_roundtrip', 1, [0, 0, 1, 0, 0]), ('heap_null', 0, []), ('heap_release', 1, [0, 0, 1, 0])]
 extra = ['stable_uninitialized', 'null_bad', 'bounds_bad', 'dead_bad',
-         'store_parameter', 'cursor_parameter', 'escape_local']
+         'store_parameter', 'cursor_parameter', 'escape_local', 'offset_bad', 'separate_bad', 'heap_dead', 'heap_double_free',
+         'heap_interior', 'heap_bounds', 'heap_stack', 'heap_unchecked']
 names = [name for name, _, _ in cases] + extra
 modules = {name: ''.join(word.capitalize() for word in name.split('_')) for name in names}
 for name in names:
@@ -68,5 +75,42 @@ run(BUILD / 'bin/goto-lean', WORK / 'memory32.gb', '--function', 'cursor_alias',
 path.write_text(path.read_text() +
                 '\n#guard (v_cursor_alias.eval 10 [0, 0, 0]).1 matches .returned (98, _)\n')
 run('lake', 'env', 'lean', path)
+path = WORK / 'Heap32.lean'
+run(BUILD / 'bin/goto-lean', WORK / 'memory32.gb', '--function', 'heap_release', '-o', path)
+path.write_text(path.read_text() +
+    '\n#guard (v_heap_release.eval 41 20 [0, 0, 1, 0]).1 matches .returned (41, _)\n'
+    '#guard (v_heap_release.eval 41 20 [0, 0, 0]).1 matches .returned (41, _)\n')
+run('lake', 'env', 'lean', path)
 print(run('lake', 'env', 'lean', 'tests/Memory.lean').strip(), flush=True)
+print(run('lake', 'env', 'lean', 'tests/Heap.lean').strip(), flush=True)
+run(BUILD / 'bin/goto-instrument', '--pointer-check', '--bounds-check',
+    WORK / 'memory.gb', WORK / 'heap-checked.gb')
+path = WORK / 'HeapChecked.lean'
+run(BUILD / 'bin/goto-lean', WORK / 'heap-checked.gb', '--function', 'heap_roundtrip', '-o', path)
+path.write_text(path.read_text() +
+    '\n#guard (v_heap_roundtrip.eval 41 20 [0, 0, 1, 0, 0]).1 matches .returned (41, _)\n')
+run('lake', 'env', 'lean', path)
 print('PASS memory lifetimes, checked failures, shared parameter effects and Lean proofs', flush=True)
+
+if cbmc := shutil.which(os.environ.get('CBMC', 'cbmc')):
+    # Match the Lean model's explicit allocation-failure branch.
+    for name, property_suffix in [
+            ('heap_roundtrip', ''), ('heap_release', ''), ('heap_null', ''),
+            ('heap_dead', 'pointer_dereference.9'),
+            ('heap_double_free', 'precondition_instance.10'),
+            ('heap_interior', 'precondition_instance.3'),
+            ('heap_bounds', 'pointer_dereference.5'),
+            ('heap_stack', 'precondition_instance.2'),
+            ('heap_unchecked', 'pointer_dereference.1')]:
+        output = run(cbmc, WORK / 'memory.gb', '--function', name, '--pointer-check',
+                     '--bounds-check', '--malloc-may-fail', '--json-ui',
+                     code=10 if property_suffix else 0)
+        (WORK / (name + '-cbmc.json')).write_text(output)
+        failures = [r['property'] for m in json.loads(output) for r in m.get('result', [])
+                    if r['status'] == 'FAILURE']
+        # An unrelated failure must not make a negative control pass.
+        if property_suffix:
+            assert name + '.' + property_suffix in failures, (name, failures)
+        else:
+            assert not failures, (name, failures)
+    print('PASS CBMC heap controls, including allocation failure', flush=True)

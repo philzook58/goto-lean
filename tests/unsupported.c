@@ -25,3 +25,6 @@ int global_memory(void) {
 int *global_address(void) { return &global; }
 
 int static_roundtrip(void) { return statics() + statics(); }
+
+/* Ordinary C features that must fail explicitly until their semantics exist. */
+unsigned parameter_address(unsigned x) { unsigned *p = &x; return *p; }

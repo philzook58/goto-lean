@@ -29,7 +29,8 @@ printer.
 | Globals/statics and initialization | Constant scalar value globals implemented; addresses and nonconstant initialization rejected |
 | Direct calls, recursion, mutual recursion | Implemented with a Lean call stack |
 | Indirect/variadic calls, unknown externals | Unimplemented |
-| Dynamic/unbounded arrays, allocation and deallocation | Requires object extents, allocation and lifetime semantics |
+| External malloc/free | Executable heap model, failure/success, arbitrary initial bytes, bounds and lifetime checks |
+| Variable-length arrays, calloc/realloc, allocation intrinsics | Unimplemented |
 | Byte extract/update, bitfields and remaining value operators | Incomplete |
 | Floating/fixed-point, vectors and other specialized types | Incomplete |
 | External memcpy / strlen | Checked Lean models when no GOTO body is supplied |
@@ -79,8 +80,7 @@ This is a first executable memory model, not full CBMC memory compatibility:
   Subobject bounds, alignment, effective types and the other C safety obligations
   still require instrumentation and/or further memory-model work.
 - Value-only globals with constant scalar initialization (including implicit C zero
-  initialization), including local statics, are shared across calls. Global addresses, heap
-  allocation and remaining library effects are still unsupported.
+  initialization), including local statics, are shared across calls. Global addresses, variable-length arrays and remaining library effects are still unsupported.
 - Pointer object/offset/invalid predicates and live object sizes are implemented.
   Unknown/dead object sizes are unconstrained: discarded extents are not modeled.
   This introduces a universal nondeterministic choice for an unavailable extent;
@@ -111,7 +111,7 @@ parameter types. General function pointers and address-taken parameters remain
 future work. No inlining, loop structuring or declaration-choice elimination
 is hidden in the printer.
 
-Two external library names have explicit Lean semantics when no GOTO body is
+Four external library names have explicit Lean semantics when no GOTO body is
 available. A supplied body always takes precedence:
 
 - `memcpy` checks whole source/destination ranges and non-overlap, copies the
@@ -120,13 +120,51 @@ available. A supplied body always takes precedence:
   fuel does not count individual copied bytes.
 - `strlen` checks the pointer and requires a terminator within the same object;
   it returns the number of preceding bytes. It has no memory effects.
+- `malloc` chooses failure or success and, on success, arbitrary bytes. A fresh ID
+  and the requested extent are stored in ordinary memory; heap ownership is separate
+  from automatic-object ownership. Zero-sized allocations may return null or a
+  fresh empty object.
+- `free(NULL)` changes nothing. Other frees require a live heap base: stack pointers,
+  interior pointers and double frees fail explicitly. Release invalidates the object
+  and records `__CPROVER_deallocated` for imported pointer checks.
 
-Both use the current object-memory validity rules, including their documented
-limits. They are explicit C library models, not a proof of equivalence to every
-CBMC built-in library implementation. `tests/Calls.lean` includes kernel-checked
+These use the current object-memory validity rules, including their documented
+limits. Heap failure is always possible, matching CBMC comparisons with
+`--malloc-may-fail`. IDs are finite and never reused; success beyond ID/extent
+capacity fails a model check. This does not establish arbitrary allocation-loop
+compatibility. Loaded malloc/free bodies retain precedence and may contain
+unsupported allocation intrinsics. `calloc`, `realloc`, leak detection, allocation
+failure modes/limits and new/delete bookkeeping are outside this slice. These
+explicit C library models do not establish equivalence to every CBMC built-in
+library implementation. `tests/Calls.lean` includes kernel-checked
 recursive execution and callee/library failures, plus a general `vcgen` memcpy
 frame proof. General modular function-contract rules and universal parser
 invariants remain proof-interface work.
+
+## Small positive and negative controls
+
+These extend the existing runners; generated Lean stays under `build/`.
+
+| C pair | Lean evidence | Independent comparison |
+| --- | --- | --- |
+| `offset_good` / `offset_bad` in `tests/memory.c` | Interior-pointer subtraction returns 11; moving before the array has a certified failed memory check | Native C on defined inputs; CBMC passes the good function and finds `offset_bad.pointer_dereference.2` |
+| `separate_good` / `separate_bad` in `tests/memory.c` | A store preserves the other object's value 7; the false assertion on input 9 has a certified failure | Native C on the good function; CBMC proves it and finds `separate_bad.assertion.1` |
+| `heap_roundtrip` / `heap_dead` in `tests/memory.c` | Successful allocation/store/load/free and allocation-failure executions; certified use-after-free failure | CBMC proves the guarded caller and finds the lifetime error |
+
+The memory runner adds 180 native comparisons and four concrete Lean certificates
+with axiom audits. These certificates establish particular executions, not universal
+safety. Negative memory accesses are never executed natively. CBMC comparisons above
+were run separately with `--pointer-check --bounds-check`; their JSON is local build data.
+`tests/Heap.lean` adds a universal allocating caller: every input is returned and
+no allocation remains live, covering failure and arbitrary initial bytes. Other
+certificates cover use-after-free, double/interior/stack free, bounds violations
+and unchecked allocation failure. Nonzero initial bytes and successful zero-size
+allocation/free are regression controls. The memory runner also replays an
+instrumented heap caller and, when CBMC is installed, checks all nine heap entries
+with allocation failure enabled. Parameter-address rejection remains tested.
+
+Run `python3 tests/memory.py build` for the memory and heap tests. CBMC comparison
+JSON stays under `build/memory/`; failing examples must exit with code 10.
 
 ## Parser-driven order
 

@@ -44,6 +44,7 @@ def pointerDifference (site : Site) (offsetBits width elementBytes : Nat)
 structure Memory where
   objects : Array (Option (Array (BitVec 8))) := #[none, none]
   globals : List (String × Nat) := []
+  heap : List Nat := [] -- IDs allocated by malloc, including released objects
   deriving Repr, BEq, DecidableEq
 
 namespace Memory

@@ -7,13 +7,14 @@ executions of the repaired C. CBMC separately checks repairs for all admitted in
 namespace ViolationExamples
 open GotoLean
 
-private def containsField (field : List Char) : List Char → Bool
+-- Byte matching avoids expensive kernel reduction of String.toList on long diagnostics.
+private def containsField (field : List UInt8) : List UInt8 → Bool
   | [] => field.isEmpty
   | text@(_ :: rest) => field.isPrefixOf text || containsField field rest
 
 /-- Match an entire property field in the retained CBMC source-site metadata. -/
 def hasProperty (property site : String) : Bool :=
-  containsField ("; property " ++ property ++ ";").toList site.toList
+  containsField ("; property " ++ property ++ ";").toUTF8.data.toList site.toUTF8.data.toList
 
 /-- The specified imported property fails on a reachable execution, refuting safety. -/
 def Violates (step : Step σ α) (initial : σ) (property : String) : Prop :=

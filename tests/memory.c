@@ -103,6 +103,36 @@ unsigned char *escape_local(void) {
   return &x;
 }
 
+/* Pointer subtraction must preserve the object and check its lower bound. */
+unsigned offset_good(unsigned i) {
+  unsigned a[2] = {11, 22};
+  unsigned *p = a + 1;
+  return *(p - (i % 2));
+}
+
+unsigned offset_bad(void) {
+  unsigned a[2] = {11, 22};
+  unsigned *p = a + 1;
+  return *(p - 2);
+}
+
+/* A store through one alias must preserve a distinct object's contents. */
+unsigned separate_good(unsigned x) {
+  unsigned a = 0, b = 7;
+  unsigned *p = &a;
+  *p = x;
+  CHECK(b == 7);
+  return b;
+}
+
+unsigned separate_bad(unsigned x) {
+  unsigned a = 0, b = 7;
+  unsigned *p = &a;
+  *p = x;
+  CHECK(b == x); /* Deliberately false for x = 9; all accesses are defined. */
+  return b;
+}
+
 #ifdef HARNESS
 int main(void) {
   CHECK(cursor_alias() == 'b');
@@ -115,3 +145,48 @@ int main(void) {
   CHECK(distinct_objects() == 24);
 }
 #endif
+
+#include <stdlib.h>
+unsigned heap_roundtrip(unsigned x) {
+  unsigned *p = malloc(sizeof *p);
+  if (!p) return 0;
+  *p = x;
+  unsigned result = *p;
+  CHECK(result == x);
+  free(p);
+  return result;
+}
+
+unsigned heap_dead(unsigned x) {
+  unsigned *p = malloc(sizeof *p);
+  if (!p) return 0;
+  *p = x;
+  free(p);
+  return *p; /* Negative heap control: use after free. */
+}
+
+unsigned heap_null(void) { free(0); return 1; }
+unsigned heap_double_free(void) {
+  unsigned *p = malloc(sizeof *p);
+  if (!p) return 0;
+  free(p); free(p); return 1;
+}
+unsigned heap_interior(void) {
+  unsigned *p = malloc(2 * sizeof *p);
+  if (!p) return 0;
+  free(p + 1); return 1;
+}
+unsigned heap_bounds(void) {
+  unsigned *p = malloc(sizeof *p);
+  if (!p) return 0;
+  p[1] = 1; free(p); return 1;
+}
+unsigned heap_stack(void) { unsigned x = 0; free(&x); return 1; }
+unsigned heap_unchecked(void) { unsigned *p = malloc(sizeof *p); *p = 1; free(p); return 1; }
+
+/* This caller handles both malloc outcomes through free(NULL). */
+unsigned heap_release(unsigned x) {
+  void *p = malloc(4);
+  free(p);
+  return x;
+}
