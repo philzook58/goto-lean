@@ -326,10 +326,12 @@ struct Printer {
         }
       }
     } while (changed);
+    bool pointer_expression = false;
     for (auto index : reachable) {
       current = instructions[index];
       const auto &i = *current;
       auto check_symbols = [&](const exprt &expr, const auto &self) -> void {
+        pointer_expression = pointer_expression || contains_pointer(expr.type());
         if (expr.id() == ID_address_of) mark_addressed(to_address_of_expr(expr).object());
         if (expr.id() == ID_symbol && expr.type().id() != ID_code) {
           const auto &id = to_symbol_expr(expr).identifier();
@@ -353,7 +355,8 @@ struct Printer {
       if (!i.is_decl() && !i.is_dead()) check_symbols(i.code(), check_symbols);
       if (i.has_condition()) check_symbols(i.condition(), check_symbols);
     }
-    memory = calls || !globals.empty() || !addressed.empty() || contains_pointer(return_type);
+    memory = calls || pointer_expression || !globals.empty() || !addressed.empty() ||
+      contains_pointer(return_type);
     for (auto index : reachable) memory = memory || !library_call(*instructions[index]).empty();
     for (const auto &[id, t] : locals) {
       memory = memory || contains_pointer(t);
@@ -467,6 +470,29 @@ struct Printer {
     }
     if (id == ID_side_effect && e.get(ID_statement) == ID_nondet)
       return havoc(e.type(), out, indent);
+    if (id == ID_side_effect && e.get(ID_statement) == ID_allocate) {
+      if (e.operands().size() != 2 || e.type().id() != ID_pointer ||
+          e.operands()[0].type().id() != ID_unsignedbv || e.operands()[1].type().id() != ID_bool)
+        fail("unsupported allocate signature");
+      const auto &base = to_pointer_type(e.type()).base_type();
+      // CBMC uses the pointee extent for typed allocations, not the size operand.
+      auto size = base.id() == ID_empty ? expression(e.operands()[0], out, indent) + ".toNat" :
+        std::to_string(byte_size(base));
+      auto zero = expression(e.operands()[1], out, indent);
+      auto tmp = fresh();
+      line(out, indent, "let " + tmp + " ← Memory.allocate " + quote(site()) + " " +
+        offset_bits() + " objectBits s.memory " + size + " " + zero);
+      line(out, indent, "s := { s with memory := " + tmp + ".2 }");
+      return tmp + ".1";
+    }
+    if (id == ID_overflow_result_mult) {
+      if (e.operands().size() != 2 || e.type().id() != ID_struct)
+        fail("unsupported multiplication overflow result signature");
+      return expression(struct_exprt({
+        mult_exprt(e.operands()[0], e.operands()[1]),
+        binary_predicate_exprt(e.operands()[0], ID_overflow_mult, e.operands()[1])},
+        e.type()), out, indent);
+    }
     if (id == ID_string_constant)
       return expression(to_string_constant(e).to_array_expr(), out, indent);
     if (id == ID_index) {
@@ -598,6 +624,8 @@ struct Printer {
     std::vector<std::string> args;
     for (const auto &op : e.operands()) args.push_back(expression(op, out, indent));
     if (args.size() == 1) {
+      if (id == ID_is_dynamic_object)
+        return "(s.memory.heap.contains (Pointer.object " + offset_bits() + " " + args[0] + "))";
       if (id == ID_pointer_object)
         return "(BitVec.ofNat " + std::to_string(width(e.type())) + " (Pointer.object " +
           offset_bits() + " " + args[0] + "))";
@@ -612,6 +640,16 @@ struct Printer {
           offset_bits() + " " + std::to_string(width(e.type())) + " s.memory " + args[0]);
         return tmp;
       }
+    }
+    if (((id == ID_r_ok || id == ID_w_ok || id == ID_rw_ok) && args.size() == 2) ||
+        ((id == ID_prophecy_r_ok || id == ID_prophecy_w_ok || id == ID_prophecy_rw_ok) &&
+          args.size() == 4)) {
+      auto tracked = [&](unsigned index, const std::string &name) {
+        return args.size() == 4 ? args[index] :
+          "(s.memory.getGlobal " + quote(name) + " (0 : " + type(e.operands()[0].type()) + "))";
+      };
+      return "(Memory.rwOk " + offset_bits() + " s.memory " + args[0] + " " + args[1] +
+        ".toNat " + tracked(2, "__CPROVER_deallocated") + " " + tracked(3, "__CPROVER_dead_object") + ")";
     }
     if ((id == ID_overflow_plus || id == ID_overflow_minus || id == ID_overflow_mult) &&
         args.size() == 2) {

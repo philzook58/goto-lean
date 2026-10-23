@@ -35,7 +35,8 @@ theorem release_caller (x : BitVec 32) :
     Action.wp_bind, Action.wp_pure, Memory.malloc, choose, Action.wp]
   intro first second succeeds
   split <;>
-    simp [Memory.free, check, Bind.bind, Action.wp_bind, Action.wp_pure, Action.wp,
+    simp [Memory.allocate, Memory.free, choose, check, Bind.bind, Action.wp_bind,
+      Action.wp_pure, Action.wp,
       Memory.bytes, Memory.release, Memory.setGlobal, Pointer.make, Pointer.object,
       Pointer.offset, v_heap_release.offsetBits, v_heap_release.objectBits, shiftLeft_eq]
 

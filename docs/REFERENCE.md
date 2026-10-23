@@ -196,7 +196,7 @@ memory)`; scalar/value-only functions retain their existing interface. Local
 objects die at `DEAD` or function exit. Invalid loads/stores fail explicit safety
 checks labeled `memory read` / `memory write`.
 
-This slice covers automatic objects and caller-supplied pointer parameters.
+This slice covers automatic objects, heap allocation and caller-supplied pointer parameters.
 It requires eight-bit bytes, matching packed/object layouts and one
 pointer width; 32- and 64-bit ABIs are tested. Taking a parameter's address is
 still unsupported. IDs are fresh and finite, so repeated allocation can exhaust
@@ -215,7 +215,9 @@ the checked [Lean library model](../GotoLean/Library.lean). Copies check complet
 source/destination ranges and non-overlap, preserve other bytes and return the
 destination pointer. String length requires a NUL inside the object. These are
 explicit library models with `vcgen` rules, not unconstrained external returns.
-Supplied GOTO bodies take precedence over these models.
+Supplied GOTO bodies take precedence over these models. For heap allocation, use
+`goto-instrument --add-library` on a linked GOTO binary to preserve CBMC's
+malloc/free/calloc bodies and failure policies; see [heap-model usage and limits](../COMPATIBILITY.md#loading-cbmcs-heap-model).
 
 Division and remainder use native bitvector operations on nonzero divisors and
 nondeterministic results on zero divisors, matching the pinned CBMC bit-blasting

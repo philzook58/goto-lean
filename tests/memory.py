@@ -26,7 +26,7 @@ def run(*args, code=0):
     return result.stdout
 
 
-run('lake', 'build', 'GotoLean', 'GotoLean.Audit', 'GotoLean.MemoryViews')
+run('lake', 'build', 'GotoLean', 'GotoLean.Audit', 'GotoLean.MemoryViews', 'GotoLean.Termination')
 run(BUILD / 'bin/goto-cc', '-D__CPROVER__', '-c', 'tests/memory.c', '-o', WORK / 'memory.gb')
 # Function, argument count, declaration choices. Do not remove overwritten declarations.
 cases = [('cursor_alias', 0, [0, 0, 0]), ('alias_local', 1, [0, 0]),
@@ -114,3 +114,49 @@ if cbmc := shutil.which(os.environ.get('CBMC', 'cbmc')):
         else:
             assert not failures, (name, failures)
     print('PASS CBMC heap controls, including allocation failure', flush=True)
+
+# Link the real CBMC library. A compile-only .gb has no entry/reachable library bodies.
+run(BUILD / 'bin/goto-cc', 'tests/heap-library.c', '-o', WORK / 'heap-library-raw.gb')
+run(BUILD / 'bin/goto-instrument', '--add-library', '--malloc-may-fail',
+    '--pointer-check', '--bounds-check', WORK / 'heap-library-raw.gb', WORK / 'heap-library.gb')
+library_cases = ['library_roundtrip', 'library_calloc', 'library_calloc_overflow',
+                 'library_double_free', 'library_dead', 'primitive_zero',
+                 'primitive_stable', 'primitive_bad', 'primitive_null']
+for name in library_cases:
+    path = WORK / (''.join(word.capitalize() for word in name.split('_')) + '.lean')
+    run(BUILD / 'bin/goto-lean', WORK / 'heap-library.gb', '--function', name, '-o', path)
+    run('lake', 'env', 'lean', '-o', path.with_suffix('.olean'), path)
+print(run('lake', 'env', 'lean', 'tests/HeapLibrary.lean').strip(), flush=True)
+
+# Changing CBMC's failure policy must change the translated library behavior too.
+for flags, outcome in [(['--no-malloc-may-fail'], '.returned (41, _)'),
+                       (['--malloc-may-fail', '--malloc-fail-assert'], '.assertionFailed _')]:
+    run(BUILD / 'bin/goto-instrument', '--add-library', *flags,
+        WORK / 'heap-library-raw.gb', WORK / 'heap-mode.gb')
+    path = WORK / 'HeapMode.lean'
+    run(BUILD / 'bin/goto-lean', WORK / 'heap-mode.gb',
+        '--function', 'library_roundtrip', '-o', path)
+    path.write_text(path.read_text() +
+        '\n#guard (v_library_roundtrip.eval 41 100 (List.replicate 100 0)).1 '
+        'matches .returned (41, _)\n' +
+        '#guard (v_library_roundtrip.eval 41 100 ((List.replicate 100 0).set 4 1)).1 '
+        f'matches {outcome}\n')
+    run('lake', 'env', 'lean', path)
+print('PASS loaded-library proofs and malloc failure policies', flush=True)
+if cbmc := shutil.which(os.environ.get('CBMC', 'cbmc')):
+    expected_failure = {
+        'library_double_free': 'free argument must be NULL or valid pointer',
+        'library_dead': 'dereference failure: deallocated dynamic object in *p',
+        'primitive_bad': 'arbitrary bytes need not be zero',
+    }
+    for name in library_cases:
+        output = run(cbmc, WORK / 'heap-library.gb', '--function', name,
+                     '--no-standard-checks', '--json-ui', code=10 if name in expected_failure else 0)
+        (WORK / (name + '-cbmc.json')).write_text(output)
+        failures = [r for m in json.loads(output) for r in m.get('result', [])
+                    if r['status'] == 'FAILURE']
+        if name in expected_failure:
+            assert any(r['description'] == expected_failure[name] for r in failures), (name, failures)
+        else:
+            assert not failures, (name, failures)
+    print('PASS CBMC loaded-library and allocation-primitive controls', flush=True)

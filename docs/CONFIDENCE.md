@@ -106,6 +106,9 @@ Concrete [memory-model limits](../COMPATIBILITY.md#first-object-memory-slice):
   loops. Pointer/integer casts can expose identity differences from CBMC.
 - Whole-object bounds and liveness do not establish general alignment, subobject
   or effective-type obligations.
+- Loaded CBMC `free` nondeterministically records a deallocated object; a single
+  replay can miss a bug. External malloc/free stubs use different policies; see
+  [heap-model usage and limits](../COMPATIBILITY.md#loading-cbmcs-heap-model).
 - Dead extents are discarded; unavailable sizes become arbitrary choices. That
   local overapproximation does not prove the whole model conservative.
 - [`memcpy`/`strlen`](../GotoLean/Library.lean) are explicit library models, not

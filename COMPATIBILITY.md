@@ -30,7 +30,8 @@ printer.
 | Direct calls, recursion, mutual recursion | Implemented with a Lean call stack |
 | Indirect/variadic calls, unknown externals | Unimplemented |
 | External malloc/free | Executable heap model, failure/success, arbitrary initial bytes, bounds and lifetime checks |
-| Variable-length arrays, calloc/realloc, allocation intrinsics | Unimplemented |
+| Allocation primitive, loaded malloc/free/calloc bodies | Implemented with CBMC failure policies, zero initialization and imported checks |
+| Variable-length arrays, realloc, remaining allocation mechanisms | Unimplemented |
 | Byte extract/update, bitfields and remaining value operators | Incomplete |
 | Floating/fixed-point, vectors and other specialized types | Incomplete |
 | External memcpy / strlen | Checked Lean models when no GOTO body is supplied |
@@ -132,14 +133,39 @@ These use the current object-memory validity rules, including their documented
 limits. Heap failure is always possible, matching CBMC comparisons with
 `--malloc-may-fail`. IDs are finite and never reused; success beyond ID/extent
 capacity fails a model check. This does not establish arbitrary allocation-loop
-compatibility. Loaded malloc/free bodies retain precedence and may contain
-unsupported allocation intrinsics. `calloc`, `realloc`, leak detection, allocation
-failure modes/limits and new/delete bookkeeping are outside this slice. These
-explicit C library models do not establish equivalence to every CBMC built-in
-library implementation. `tests/Calls.lean` includes kernel-checked
+compatibility. The external stubs do not implement CBMC's allocation failure
+modes/limits or new/delete bookkeeping. Use loaded library bodies for those policies.
+`realloc` and leak-check insertion remain unsupported. These explicit C library models
+do not establish equivalence to every CBMC built-in library implementation. `tests/Calls.lean` includes kernel-checked
 recursive execution and callee/library failures, plus a general `vcgen` memcpy
 frame proof. General modular function-contract rules and universal parser
 invariants remain proof-interface work.
+
+### Loading CBMC's heap model
+
+Compile/link with an entry point (omit `-c`), then use `goto-instrument --add-library`
+with the desired allocation-failure options before printing. The library linker follows
+calls reachable from the entry; adding the library to an entryless object need not load
+any bodies. Include `--pointer-check --bounds-check` to retain memory-safety properties.
+
+The printer now handles the `allocate(size, zero)` side effect, dynamic-object tests,
+and r/w/rw_ok predicates (including their prophecy forms). The allocator always succeeds;
+the **loaded C library** controls failure, maximum size and bookkeeping. Its zero flag
+selects zero bytes without an arbitrary-byte choice, or stable arbitrary initial bytes.
+CBMC uses the pointee extent for typed allocations and the size operand for void pointers;
+the printer follows that distinction using CBMC's layout information.
+
+Loaded `__CPROVER_deallocate` executes unchanged: it nondeterministically records a
+pointer in `__CPROVER_deallocated`. It does **not** erase bytes. Imported checks can
+therefore witness a deallocated object, while another monitoring choice may miss it on
+one replay. Successful replay is not universal safety. The external `free` stub instead
+invalidates every freed object; the two paths deliberately expose different models.
+
+`tests/heap-library.c` and `tests/HeapLibrary.lean` exercise the actual loaded bodies:
+roundtrip, allocation failure, calloc zeroing and size overflow, named double-free and
+use-after-free violations, and arbitrary initial bytes. The existing memory runner
+checks these against CBMC and tests no-failure and assert-on-failure policies. This
+is regression evidence, not a proof of full CBMC memory-model correspondence.
 
 ## Small positive and negative controls
 
