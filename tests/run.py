@@ -191,8 +191,6 @@ open GotoLean
     run([args.lake, 'env', 'lean', work / 'Regressions.lean'], env=env)
     run([args.lake, 'env', 'lean', ROOT / 'examples/Proofs.lean'], env=env)
     print('PASS vcgen proofs, assertion/assumption outcomes, choice replay and bounds', flush=True)
-    experiments = run([args.lake, 'env', 'lean', '--run', ROOT / 'experiments/Encodings.lean'], env=env)
-    print(experiments.stdout.strip(), flush=True)
 
     if args.ir:
         ir_obj = work / 'ir.gb'
@@ -204,7 +202,7 @@ open GotoLean
             run([args.printer, ir_obj, '--function', name, '-o', path])
             ir_runner.append(path.read_text().replace('import GotoLean\n', ''))
             ir_runner.append(f'#guard (v_{name}.eval 10).1 == .returned ({value})\n')
-        for name in ['lazy_choice', 'bool_choice', 'array_oob', 'union_padding']:
+        for name in ['lazy_choice', 'bool_choice', 'array_oob', 'union_padding', 'byte_extract_partial', 'byte_update_dynamic']:
             path = work / f'Ir{module(name)}.lean'
             run([args.printer, ir_obj, '--function', name, '-o', path])
             ir_runner.append(path.read_text().replace('import GotoLean\n', ''))
@@ -215,7 +213,11 @@ open GotoLean
                       '#guard (v_array_oob.eval 10 [83]).1 == .returned 83',
                       '#guard (v_array_oob.eval 10 []).1 matches .choiceError _',
                       '#guard (v_union_padding.eval 10 [0]).1 == .returned 37',
-                      '#guard (v_union_padding.eval 10 [1]).1 == .returned 293']
+                      '#guard (v_union_padding.eval 10 [1]).1 == .returned 293',
+                      '#guard (v_byte_extract_partial.eval 10 [0]).1 == .returned 18',
+                      '#guard (v_byte_extract_partial.eval 10 [65280]).1 == .returned 65298',
+                      '#guard (v_byte_update_dynamic.eval 10 [3]).1 == .returned 3442759288',
+                      '#guard (v_byte_update_dynamic.eval 10 [4294967295]).1 == .returned 305419896']
         (work / 'IrOracle.lean').write_text('import GotoLean\n' + '\n'.join(ir_runner))
         run([args.lake, 'env', 'lean', work / 'IrOracle.lean'], env=env)
         print(f'PASS {len(answers)} CBMC IR oracle cases, Boolean choices and lazy evaluation', flush=True)
@@ -223,7 +225,7 @@ open GotoLean
     bad_obj = work / 'unsupported.gb'
     run([args.goto_cc, '-c', ROOT / 'tests/unsupported.c', '-o', bad_obj])
     preserved = work / 'preserved.lean'
-    for name in ['floating', 'calls', 'indirect', 'global_address', 'missing',
+    for name in ['floating', 'calls', 'indirect', 'missing',
                  'parameter_address']:
         preserved.write_text('keep me\n')
         result = run([args.printer, bad_obj, '--function', name, '-o', preserved], ok=False)

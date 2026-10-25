@@ -10,4 +10,5 @@ generate:
 check: generate
 	lake build
 	lake env lean Audit.lean
+	python3 compare.py
 	lake env lean --run Run.lean

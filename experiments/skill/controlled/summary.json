@@ -1,0 +1,360 @@
+[
+  {
+    "name": "branch-compact-1",
+    "task": "branch",
+    "arm": "compact",
+    "repeat": 1,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 121.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 149516,
+    "tool_calls": 18,
+    "guide_read": false,
+    "assessment": "provider_interrupted",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "branch-compact-3",
+    "task": "branch",
+    "arm": "compact",
+    "repeat": 3,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 126.5,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 215032,
+    "tool_calls": 18,
+    "guide_read": false,
+    "assessment": "provider_interrupted",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "branch-selected-1",
+    "task": "branch",
+    "arm": "selected",
+    "repeat": 1,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 127.1,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 260983,
+    "tool_calls": 19,
+    "guide_read": false,
+    "assessment": "provider_interrupted",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "branch-selected-2",
+    "task": "branch",
+    "arm": "selected",
+    "repeat": 2,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "choice-compact-1",
+    "task": "choice",
+    "arm": "compact",
+    "repeat": 1,
+    "exit_code": 143,
+    "timed_out": true,
+    "seconds": 180.0,
+    "changed_protected_files": [],
+    "passed": true,
+    "grade_exit_code": 0,
+    "provider_errors": [],
+    "generated_tokens_recorded": 139268,
+    "tool_calls": 18,
+    "guide_read": true,
+    "assessment": "verified_requested_proof",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "choice-compact-2",
+    "task": "choice",
+    "arm": "compact",
+    "repeat": 2,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 7.0,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 8400,
+    "tool_calls": 3,
+    "guide_read": false,
+    "assessment": "provider_interrupted",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "complement-selected-2",
+    "task": "complement",
+    "arm": "selected",
+    "repeat": 2,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.6,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "branch-selected-3",
+    "task": "branch",
+    "arm": "selected",
+    "repeat": 3,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "complement-compact-2",
+    "task": "complement",
+    "arm": "compact",
+    "repeat": 2,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 5.8,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 2346,
+    "tool_calls": 1,
+    "guide_read": false,
+    "assessment": "provider_interrupted",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "choice-selected-3",
+    "task": "choice",
+    "arm": "selected",
+    "repeat": 3,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.6,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "branch-compact-2",
+    "task": "branch",
+    "arm": "compact",
+    "repeat": 2,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.6,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "choice-compact-3",
+    "task": "choice",
+    "arm": "compact",
+    "repeat": 3,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "complement-selected-1",
+    "task": "complement",
+    "arm": "selected",
+    "repeat": 1,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "complement-compact-1",
+    "task": "complement",
+    "arm": "compact",
+    "repeat": 1,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "choice-selected-2",
+    "task": "choice",
+    "arm": "selected",
+    "repeat": 2,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "choice-selected-1",
+    "task": "choice",
+    "arm": "selected",
+    "repeat": 1,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "complement-compact-3",
+    "task": "complement",
+    "arm": "compact",
+    "repeat": 3,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  },
+  {
+    "name": "complement-selected-3",
+    "task": "complement",
+    "arm": "selected",
+    "repeat": 3,
+    "exit_code": 0,
+    "timed_out": false,
+    "seconds": 0.7,
+    "changed_protected_files": [],
+    "passed": false,
+    "grade_exit_code": 1,
+    "provider_errors": [
+      "402: {\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-flight requests settle (see the Retry-After header). Adding credits at https://openrouter.ai/settings/credits raises your in-flight budget, up to a capped ceiling.\",\"headers\":{\"Retry-After\":\"120\"},\"provider_name\":null}}"
+    ],
+    "generated_tokens_recorded": 0,
+    "tool_calls": 0,
+    "guide_read": false,
+    "assessment": "provider_rejected_before_generation",
+    "binary_hashes_match_original": true
+  }
+]

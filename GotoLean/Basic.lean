@@ -65,6 +65,11 @@ theorem wp_mono (x : Action α) (h : ∀ a, P a → Q a) : wp x P → wp x Q := 
   | check site b k ih => exact fun hx => ⟨hx.1, ih hx.2⟩
   | assume site b k ih => exact fun hx hb => ih (hx hb)
 
+/-- Push `wp` into a symbolic branch; not `@[simp]`, since it duplicates the postcondition. -/
+theorem wp_ite {c : Prop} [Decidable c] (a b : Action α) (post : α → Prop) :
+    wp (if c then a else b) post = if c then wp a post else wp b post := by
+  split <;> rfl
+
 @[simp] theorem wp_bind (x : Action α) (f : α → Action β) (post : β → Prop) :
     wp (bind x f) post = wp x (fun a => wp (f a) post) := by
   induction x with

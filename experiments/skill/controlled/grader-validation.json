@@ -1,0 +1,6 @@
+{
+  "valid_completion_adapter": "accepted",
+  "weakened_postcondition": "rejected",
+  "additional_false_assumption": "rejected",
+  "fixtures": "Controller-only prior positive proof; never provided to Gemma."
+}

@@ -23,3 +23,6 @@ name = "Verified"
 
 [[lean_lib]]
 name = "Checked"
+
+[[lean_lib]]
+name = "Cases"

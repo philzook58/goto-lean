@@ -35,8 +35,15 @@ it does not infer invariants or silently remove checks.
 2. See an actual CBMC violation and its kernel-checked Lean certificate.
 3. Read an unbounded array contract without reading the loop proof.
 
-[Use your own C, or give an AI the task](docs/WORKFLOW.md).
+[Use your own C](docs/WORKFLOW.md):
+`python3 tools/translate.py input.c --function process --out build/try`
+generates a model and preserves a separate starter spec.
 [Detailed commands and semantics](docs/REFERENCE.md).
+
+For AI-assisted proof development, use the repository's
+[`goto-lean` skill](.agents/skills/goto-lean/SKILL.md) and
+[agent proof guide](docs/AGENT_GUIDE.md). The guide covers replay choices,
+universal checks, loop invariants and counterexample certificates.
 
 ## Build once
 
@@ -52,17 +59,17 @@ lake build
 CMake fetches pinned CBMC 6.11.0 source. A preinstalled CBMC executable is only
 needed for the optional comparison commands; see the [reference](docs/REFERENCE.md).
 
-## What is established today?
+## Three examples to review
 
-| Example | Checked guarantee |
-| --- | --- |
-| [C assertion examples](examples/checks/checks.c) | Five universal Lean proofs, including selected inserted safety checks |
-| [Instrumented fill](examples/arrays/Spec/CheckedFill.lean) | Unbounded safety, filled contents, byte framing, and termination |
-| [Heap examples](tests/Heap.lean) | Universal allocation/free caller; successful/failing executions and lifetime-error certificates |
-| [CBMC heap library](tests/HeapLibrary.lean) | Loaded malloc/free/calloc bodies, failure policies and imported counterexamples |
-| [Fill's caller](examples/arrays/Spec/Caller.lean) | Every value: four local ints, checked endpoints, correct return, released storage; certified underfill failure |
-| [Seven array contracts](examples/arrays/Spec.lean) | Universal proofs over raw translations; six still await universal proofs of imported checks |
-| [12 bug/repair pairs](examples/violations/README.md) | Named violations certified in Lean; repairs checked by CBMC and concrete Lean executions |
+| Example                                                      | Checked guarantee                                                                        |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| [Assertions in C](examples/checks/checks.c)                  | Five universal Lean proofs, including selected inserted safety checks                    |
+| [Fill and its caller](examples/arrays/Spec/CheckedFill.lean) | Unbounded checked fill; a caller establishes its memory premises                         |
+| [Bug/repair pairs](examples/violations/README.md)            | Named violations certified in Lean; repairs checked by CBMC and concrete Lean executions |
+
+[Array contracts](examples/arrays/README.md), the [token parser](examples/parser/README.md),
+[three real-code case studies](examples/case-studies/README.md), and the
+[compatibility inventory](COMPATIBILITY.md) contain the remaining examples and limits.
 
 The generated program, its preconditions and the exact theorem determine the
 claim. C translation, the C++ printer and agreement of the memory model with
@@ -80,5 +87,8 @@ New semantics should have a successful example and a certified failing example.
 
 [GitHub Actions](.github/workflows/ci.yml) regenerates Lean from the checked-in C
 and runs the regressions serially in a container limited to 4 GiB. Generated
-example directories, build outputs and local receipts are ignored; handwritten
+example directories (except the tutorial's `Generated/Add.lean`), build outputs and local receipts are ignored; handwritten
 imports, runtime, specifications and proofs stay in Git.
+
+# AI Disclosure
+Agents were heavily used to make this project

@@ -112,12 +112,23 @@ additionally assumes `k ≤ n`. The layout is the generated
 
 ACSL comments are preserved as specification references. They are not parsed or
 trusted as Lean assumptions: their contracts and invariants were manually
-expressed and proved in Lean. Translation from C through CBMC and the fidelity of
+expressed and proved in Lean. The `/*@ ... */` comments themselves are not
+machine-checked by this workflow; they are upstream Frama-C annotations.
+For a clause-by-clause reading of checked fill, see [the tutorial](../../docs/TUTORIAL.md#3-an-unbounded-loop-with-a-readable-contract).
+Translation from C through CBMC and the fidelity of
 the memory model remain trust boundaries. `Audit.lean` rejects theorem dependencies outside `propext`, `Classical.choice`
 and `Quot.sound` with `#check_axioms`. There are
 no unfinished proofs, custom axioms, or native-decision certificates.
 
 ## Concrete runs and a counterexample
+
+[`Cases/Inputs.lean`](Cases/Inputs.lean) lists twenty named array cases and twenty
+sorted search cases. It separately proves their memory, nonwrapping, machine-size,
+lifetime-metadata, sortedness and pivot premises. [`Cases.lean`](Cases.lean) certifies
+twenty normal returns for each of the seven instrumented algorithms (140 executions).
+The existing native C/Lean/Python runners consume these same rows. Checks are split
+by case to stay within a 1 GiB Lean limit. This tests useful admitted inputs; it
+does not establish input or branch coverage.
 
 `compare.py` supplies 860 cases to native C and generated Lean and checks both
 against Python's independent `bisect_left` and sequence reversal. Cases include

@@ -1,0 +1,122 @@
+[
+  {
+    "trial": "bug-v1",
+    "seconds": 191.6,
+    "timed_out": false,
+    "tool_calls": 41,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "bug-v2",
+    "seconds": 109.3,
+    "timed_out": false,
+    "tool_calls": 21,
+    "compile_exit_code": 0,
+    "source_matches_task": true,
+    "audit_and_scope": "passed named replay/refutation; witness export omitted",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "copy-v2",
+    "seconds": 92.3,
+    "timed_out": false,
+    "tool_calls": 16,
+    "compile_exit_code": 0,
+    "source_matches_task": true,
+    "audit_and_scope": "passed named WP claim; completion export omitted",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "copy-vfinal",
+    "seconds": 240.0,
+    "timed_out": true,
+    "tool_calls": 32,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "loop-v1",
+    "seconds": 265.9,
+    "timed_out": false,
+    "tool_calls": 27,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "loop-v2",
+    "seconds": 71.4,
+    "timed_out": false,
+    "tool_calls": 29,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "loop-v3",
+    "seconds": 300.1,
+    "timed_out": true,
+    "tool_calls": 15,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "prove-v1",
+    "seconds": 59.9,
+    "timed_out": false,
+    "tool_calls": 36,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "prove-v2",
+    "seconds": 77.4,
+    "timed_out": false,
+    "tool_calls": 36,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "no accepted proof",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "prove-v3",
+    "seconds": 183.2,
+    "timed_out": false,
+    "tool_calls": 22,
+    "compile_exit_code": 0,
+    "source_matches_task": true,
+    "audit_and_scope": "rejected native axioms",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "prove-v4",
+    "seconds": 61.3,
+    "timed_out": false,
+    "tool_calls": 31,
+    "compile_exit_code": 1,
+    "source_matches_task": true,
+    "audit_and_scope": "rejected native axiom",
+    "runtime_unchanged": true
+  },
+  {
+    "trial": "replay-v1",
+    "seconds": 84.8,
+    "timed_out": false,
+    "tool_calls": 14,
+    "compile_exit_code": 0,
+    "source_matches_task": true,
+    "audit_and_scope": "concrete guards only",
+    "runtime_unchanged": true
+  }
+]

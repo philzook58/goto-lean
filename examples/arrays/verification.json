@@ -2,8 +2,8 @@
   "source": "algorithms.c",
   "compile": ["-std=c11"],
   "checks": ["--pointer-check", "--bounds-check", "--signed-overflow-check", "--div-by-zero-check", "--undefined-shift-check"],
-  "build": ["Checked", "Proofs.CheckedFill"],
-  "proofs": ["Proofs.CheckedFill", "CheckedExecutions", "Proofs.Caller"],
+  "build": ["Checked", "Proofs.CheckedFill", "Cases"],
+  "proofs": ["Proofs.CheckedFill", "CheckedExecutions", "Proofs.Caller", "Cases"],
   "expected_properties": {
     "bubble_sort": {"pointer dereference": 12},
     "fill": {"pointer dereference": 6},

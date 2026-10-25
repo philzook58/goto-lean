@@ -1,4 +1,7 @@
-# Unchanged token parser
+# Unchanged local repair helper
+
+This helper was written in the local Cornell serial-assurance repair experiment;
+it is not original Cornell firmware. See [source attribution](../../examples/parser/SOURCE.md).
 
 The actual `cornell-serial-assurance/generated/take_word.inc` and its existing
 `harness/check_word.c` now translate and type-check. The selected `take_word`
@@ -52,7 +55,7 @@ python3 experiments/parser/run.py
 The script needs the sibling Cornell project; standalone CTest does not. Its
 generated files remain under `build/parser`. The script checks both the concrete
 executions and the universal parser proofs against modules generated from the
-original Cornell harness. The proof assumes separate live input/output/cursor
+local repair harness. The proof assumes separate live input/output/cursor
 objects, readable input bytes containing NUL, a valid cursor value, output capacity
 and pointer-offset bounds, using the 64-bit ABI. It proves safety and partial
 correctness, not termination or the complete command parser. Globals, more

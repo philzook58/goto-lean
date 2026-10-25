@@ -36,6 +36,22 @@ static unsigned odd(unsigned n) { return n == 0 ? 0 : even(n - 1); }
 static unsigned checked(unsigned x) { CHECK(x != 7); return x; }
 unsigned callee_bad(unsigned x) { return checked(x); }
 
+/* Large straight-line blocks exercise declaration splitting without extra fuel steps. */
+#define STEP x += 1; CHECK(x != 0);
+#define TEN STEP STEP STEP STEP STEP STEP STEP STEP STEP STEP
+unsigned long_block(unsigned x) {
+  unsigned result;
+  TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN TEN
+#ifdef __CPROVER__
+  __CPROVER_assume(x != 500);
+#endif
+  result = x;
+  return result;
+}
+unsigned long_called(unsigned x) { return long_block(x); }
+#undef TEN
+#undef STEP
+
 static unsigned char *local_pointer(void) {
   unsigned char local = 42;
   return &local;

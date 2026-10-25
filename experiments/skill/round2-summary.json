@@ -1,0 +1,540 @@
+[
+  {
+    "trial": "baseline-assume",
+    "task": "assume",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "add_small_correct"
+    ],
+    "tool_calls": 25,
+    "reasoning_blocks": 25,
+    "reasoning_chars": 16981,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "coached-assume",
+    "task": "assume",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": true,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 26,
+    "reasoning_blocks": 26,
+    "reasoning_chars": 14800,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "coached-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": true,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 24,
+    "reasoning_blocks": 24,
+    "reasoning_chars": 15335,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "coached-choice",
+    "task": "choice",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": true,
+    "seconds": 128.8,
+    "timed_out": false,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "feasible_replay",
+      "completes"
+    ],
+    "tool_calls": 14,
+    "reasoning_blocks": 14,
+    "reasoning_chars": 16841,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "compact-assume",
+    "task": "assume",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 158.5,
+    "timed_out": false,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 24,
+    "reasoning_blocks": 25,
+    "reasoning_chars": 15602,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "compact-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 22,
+    "reasoning_blocks": 22,
+    "reasoning_chars": 17477,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "compact-complement",
+    "task": "complement",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 92.8,
+    "timed_out": false,
+    "compile_exit_code": 0,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "audit_exit_code": 1,
+    "tool_calls": 14,
+    "reasoning_blocks": 15,
+    "reasoning_chars": 7379,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "compact-fixed-loop",
+    "task": "fixed-loop",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 20,
+    "reasoning_blocks": 20,
+    "reasoning_chars": 9808,
+    "broad_skill_search": true
+  },
+  {
+    "trial": "compact-loop",
+    "task": "loop",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 109.3,
+    "timed_out": false,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "block",
+      "entry_correct"
+    ],
+    "tool_calls": 15,
+    "reasoning_blocks": 16,
+    "reasoning_chars": 15602,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "completion-starter-choice",
+    "task": "choice",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 15,
+    "reasoning_blocks": 15,
+    "reasoning_chars": 8821,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "completion-starter-complement",
+    "task": "complement",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 107.8,
+    "timed_out": false,
+    "compile_exit_code": 0,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "audit_exit_code": 0,
+    "tool_calls": 14,
+    "reasoning_blocks": 15,
+    "reasoning_chars": 9035,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "completion-starter-fixed-loop",
+    "task": "fixed-loop",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 7,
+    "reasoning_blocks": 7,
+    "reasoning_chars": 4613,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "focused-loop",
+    "task": "loop",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "safety"
+    ],
+    "tool_calls": 12,
+    "reasoning_blocks": 12,
+    "reasoning_chars": 17045,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "full-assume",
+    "task": "assume",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "entry_correct"
+    ],
+    "tool_calls": 31,
+    "reasoning_blocks": 31,
+    "reasoning_chars": 19511,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "full-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 22,
+    "reasoning_blocks": 22,
+    "reasoning_chars": 15802,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "full-complement",
+    "task": "complement",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 126.3,
+    "timed_out": false,
+    "compile_exit_code": 0,
+    "c_unchanged": true,
+    "runtime_unchanged": true,
+    "public_theorems": [
+      "completes"
+    ],
+    "audit_exit_code": 1,
+    "tool_calls": 17,
+    "reasoning_blocks": 17,
+    "reasoning_chars": 10204,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "full-loop",
+    "task": "loop",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "block",
+      "entry_correct"
+    ],
+    "tool_calls": 21,
+    "reasoning_blocks": 18,
+    "reasoning_chars": 22830,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "high-selected-loop",
+    "task": "loop",
+    "thinking": "high",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 240.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "decreases_drain",
+      "entry_correct"
+    ],
+    "tool_calls": 22,
+    "reasoning_blocks": 21,
+    "reasoning_chars": 25580,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "preload-compact-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 24,
+    "reasoning_blocks": 24,
+    "reasoning_chars": 12063,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "preload-full-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 74.5,
+    "timed_out": false,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 14,
+    "reasoning_blocks": 15,
+    "reasoning_chars": 11682,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "preload-selected-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 19,
+    "reasoning_blocks": 18,
+    "reasoning_chars": 15778,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "refined-assume",
+    "task": "assume",
+    "thinking": "high",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 24,
+    "reasoning_blocks": 24,
+    "reasoning_chars": 14934,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "refined-branch",
+    "task": "branch",
+    "thinking": "high",
+    "preloaded_guidance": true,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 20,
+    "reasoning_blocks": 20,
+    "reasoning_chars": 19499,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "selected-assume",
+    "task": "assume",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 30,
+    "reasoning_blocks": 30,
+    "reasoning_chars": 15437,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "selected-branch",
+    "task": "branch",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 18,
+    "reasoning_blocks": 18,
+    "reasoning_chars": 13807,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "selected-fixed-loop",
+    "task": "fixed-loop",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": null,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [],
+    "tool_calls": 3,
+    "reasoning_blocks": 3,
+    "reasoning_chars": 1252,
+    "broad_skill_search": true
+  },
+  {
+    "trial": "selected-loop",
+    "task": "loop",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 99.7,
+    "timed_out": false,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "safe_inv",
+      "entry_correct"
+    ],
+    "tool_calls": 34,
+    "reasoning_blocks": 35,
+    "reasoning_chars": 25391,
+    "broad_skill_search": false
+  },
+  {
+    "trial": "starter-assume",
+    "task": "assume",
+    "thinking": "low",
+    "preloaded_guidance": false,
+    "seeded_attempt": false,
+    "seconds": 180.0,
+    "timed_out": true,
+    "compile_exit_code": 1,
+    "c_unchanged": true,
+    "runtime_unchanged": false,
+    "public_theorems": [
+      "completes"
+    ],
+    "tool_calls": 17,
+    "reasoning_blocks": 17,
+    "reasoning_chars": 11646,
+    "broad_skill_search": false
+  }
+]

@@ -31,7 +31,7 @@ set_option experimental.vcgen true
 private def wordMemory : Memory := { objects := #[none, none, some #[0, 0, 0, 0]] }
 private def wordPointer : BitVec 64 := Pointer.make 56 2 0
 #guard (v_store_parameter.eval wordPointer 305419896 10 [] wordMemory).1 matches
-  .returned (305419896, { objects := #[none, none, some #[120, 86, 52, 18]], globals := [], heap := [] })
+  .returned (305419896, ⟨#[none, none, some #[120, 86, 52, 18]], [], [], []⟩)
 
 private def cursorMemory : Memory :=
   { objects := #[none, none, some #[97, 98, 0], some (Memory.unpack wordPointer)] }

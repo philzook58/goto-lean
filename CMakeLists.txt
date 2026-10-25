@@ -35,9 +35,16 @@ if(BUILD_TESTING)
     --printer $<TARGET_FILE:goto-lean> --goto-cc $<TARGET_FILE:goto-cc>
     --ir $<TARGET_FILE:goto-lean-ir> --lake "${LAKE_EXECUTABLE}" --work "${CMAKE_BINARY_DIR}/tests")
   set_tests_properties(goto-lean-tests PROPERTIES TIMEOUT 300)
+  add_test(NAME goto-lean-translate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_SOURCE_DIR}/tests/translate.py" "${CMAKE_BINARY_DIR}")
+  set_tests_properties(goto-lean-translate PROPERTIES
+    TIMEOUT 180 RUN_SERIAL TRUE DEPENDS goto-lean-tests)
   add_test(NAME goto-lean-memory COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_SOURCE_DIR}/tests/memory.py" "${CMAKE_BINARY_DIR}")
   set_tests_properties(goto-lean-memory PROPERTIES TIMEOUT 300)
+  add_test(NAME goto-lean-options COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_SOURCE_DIR}/tests/options.py" "${CMAKE_BINARY_DIR}")
+  set_tests_properties(goto-lean-options PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE)
   add_test(NAME goto-lean-calls COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_SOURCE_DIR}/tests/calls.py" "${CMAKE_BINARY_DIR}")
   set_tests_properties(goto-lean-calls PROPERTIES TIMEOUT 300)
@@ -78,4 +85,11 @@ if(BUILD_TESTING)
     "${MAKE_EXECUTABLE}" check checked)
   set_tests_properties(goto-lean-arrays PROPERTIES
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/examples/arrays" TIMEOUT 120 RUN_SERIAL TRUE)
+  add_test(NAME goto-lean-case-studies COMMAND "${CMAKE_COMMAND}" -E env
+    "GOTO_CC=$<TARGET_FILE:goto-cc>" "GOTO_LEAN=$<TARGET_FILE:goto-lean>"
+    "GOTO_INSTRUMENT=$<TARGET_FILE:goto-instrument>"
+    "${MAKE_EXECUTABLE}" check)
+  set_tests_properties(goto-lean-case-studies PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/examples/case-studies"
+    TIMEOUT 180 RUN_SERIAL TRUE DEPENDS goto-lean-tests)
 endif()

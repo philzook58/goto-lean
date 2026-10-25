@@ -4,6 +4,11 @@ import GotoLean.Termination
 /-! A proved callee contract can resume an arbitrary caller in the same program body. -/
 namespace GotoLean
 
+/-- Lift a typed postcondition through a return constructor, excluding other variants.
+The payload may include both the result and memory, so callers can state frame conditions. -/
+def ReturnPost (tag : ρ → α) (post : ρ → Prop) (value : α) : Prop :=
+  ∃ result, value = tag result ∧ post result
+
 /-- Attach a caller continuation to a completed function, preserving internal calls and checks. -/
 theorem finishes_resume (body : σ → Action (Transfer σ α))
     (calleeFinish : α → Action β) (callerFinish : α → Action γ)

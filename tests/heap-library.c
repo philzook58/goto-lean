@@ -68,4 +68,70 @@ unsigned primitive_bad(void) {
   return *p;
 }
 
-int main(void) { return library_roundtrip(41) + library_calloc(); }
+/* Both failure paths must leave ownership clear; success preserves the old prefix. */
+unsigned library_realloc(unsigned grow) {
+  unsigned char *p = malloc(2);
+  if (!p) return 0;
+  p[0] = 17; p[1] = 23;
+  unsigned char *q = realloc(p, grow ? 4 : 1);
+  if (!q) {
+    __CPROVER_assert(p[0] == 17 && p[1] == 23, "failed realloc preserves old storage");
+    free(p);
+    return 2;
+  }
+  __CPROVER_assert(q[0] == 17 && (!grow || q[1] == 23), "realloc preserves prefix");
+  free(q);
+  return 1;
+}
+
+unsigned library_realloc_null(void) {
+  void *p = realloc(0, 2);
+  if (!p) return 0;
+  free(p);
+  return 1;
+}
+
+unsigned library_realloc_zero(void) {
+  void *p = malloc(1);
+  if (!p) return 0;
+  void *q = realloc(p, 0);
+  free(q);
+  return 1;
+}
+
+unsigned library_realloc_bad(void) {
+  unsigned char *p = malloc(1);
+  if (!p) return 0;
+  p[0] = 17;
+  unsigned char *q = realloc(p, 2);
+  if (!q) { free(p); return 0; }
+  __CPROVER_assert(q[1] == 0, "realloc extension need not be zero");
+  free(q);
+  return 1;
+}
+
+unsigned library_realloc_old(void) {
+  unsigned char *p = malloc(1);
+  if (!p) return 0;
+  p[0] = 17;
+  unsigned char *q = realloc(p, 2);
+  if (!q) { free(p); return 0; }
+  return *p; /* Negative: realloc freed the old object. */
+}
+
+unsigned copy_padding_bad(void) {
+  unsigned char src[1] = {17}, dst[2] = {0, 0};
+  __CPROVER_array_copy(dst, src);
+  __CPROVER_assert(dst[0] == 17, "array_copy prefix");
+  __CPROVER_assert(dst[1] == 0, "array_copy padding need not retain destination bytes");
+  return dst[1];
+}
+
+unsigned short_circuit(unsigned b) {
+  unsigned x = 17, *p = b ? &x : 0;
+  __CPROVER_assert(!b || *p == 17, "guarded or skips null read");
+  __CPROVER_assert((b && *p == 17) == (b != 0), "guarded and skips null read");
+  return b != 0;
+}
+
+int main(void) { return library_roundtrip(41) + library_calloc() + library_realloc(1); }

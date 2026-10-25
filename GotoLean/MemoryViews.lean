@@ -103,4 +103,52 @@ theorem valueAt_written (m : Memory) (bits : Nat) (p : BitVec pw) (value : BitVe
   · simp only [written, hb, Option.getD_some, bytes_put m _ _ (bytes_bound m _ b hb)]
     exact readBits_writeBits_word b _ value word hn
 
+
+private theorem readByte_default (m : Memory) (object offset : Nat) :
+    m.readByte object offset = ((m.bytes object).getD #[])[offset]? := by
+  cases h : m.bytes object <;> simp [readByte, h]
+
+private theorem readBits_eq_of_readByte (m m' : Memory) (object offset width : Nat)
+    (h : ∀ i, i < (width + 7) / 8 →
+      m'.readByte object (offset + i) = m.readByte object (offset + i)) :
+    readBits ((m'.bytes object).getD #[]) offset width =
+      readBits ((m.bytes object).getD #[]) offset width := by
+  have byte (i : Nat) (hi : i < (width + 7) / 8) :
+      ((m'.bytes object).getD #[])[offset + i]? =
+        ((m.bytes object).getD #[])[offset + i]? := by
+    simpa only [readByte_default] using h i hi
+  have fold (indices : List Nat) (hi : ∀ i ∈ indices, i < (width + 7) / 8)
+      (a : BitVec width) :
+      indices.foldl (fun v i ↦ v ||| shiftLeft
+        ((((m'.bytes object).getD #[])[offset + i]?.getD 0).setWidth width) (i*8)) a =
+      indices.foldl (fun v i ↦ v ||| shiftLeft
+        ((((m.bytes object).getD #[])[offset + i]?.getD 0).setWidth width) (i*8)) a := by
+    induction indices generalizing a with
+    | nil => rfl
+    | cons i rest ih =>
+      simp only [List.foldl_cons, byte i (hi i (by simp))]
+      exact ih (fun j hj ↦ hi j (by simp [hj])) _
+  exact fold _ (fun i hi ↦ List.mem_range.mp hi) _
+
+/-- A disjoint checked store preserves a readable word and its value. -/
+theorem valueAt_written_disjoint (m : Memory) (bits : Nat) (p q : BitVec pw)
+    (value : BitVec w) (expected : BitVec rw)
+    (write : m.valid bits p ((w + 7) / 8) = true)
+    (read : m.ValueAt bits q expected)
+    (apart : Pointer.object bits q ≠ Pointer.object bits p ∨
+      Pointer.offset bits q + (rw + 7) / 8 ≤ Pointer.offset bits p ∨
+      Pointer.offset bits p + (w + 7) / 8 ≤ Pointer.offset bits q) :
+    (m.written bits p value).ValueAt bits q expected := by
+  constructor
+  · rw [valid_of_extent m _ (written_extent m bits p value write)]
+    exact read.1
+  · rw [readBits_eq_of_readByte m _ _ _ _]
+    · exact read.2
+    · intro i hi
+      apply readByte_written_frame _ _ _ _ write
+      rcases apart with ho | h | h
+      · exact Or.inl ho
+      · exact Or.inr (Or.inl (by omega))
+      · exact Or.inr (Or.inr (by omega))
+
 end GotoLean.Memory

@@ -7,6 +7,8 @@ import CopyOverlap
 import CopyBounds
 import StringBad
 import CallVoid
+import LongBlock
+import LongCalled
 
 open GotoLean Std.WP Lean.Order
 set_option experimental.vcgen true
@@ -20,6 +22,14 @@ set_option experimental.vcgen true
 #guard (v_call_void.eval (Pointer.make 56 2 0) 20 []
   { objects := #[none, none, some #[0, 0, 0, 0]] }).1 ==
   .returned ((), { objects := #[none, none, some #[3, 0, 0, 0]] })
+
+#guard v_long_block.eval 0 2 [7, 8] == (.returned 160, [8])
+#guard (v_long_block.eval 0 1 [0]).1 matches .exhausted _
+#guard (v_long_block.eval 0 2 []).1 matches .choiceError _
+#guard (v_long_block.eval 4294967195 2 [0]).1 matches .assertionFailed _
+#guard (v_long_block.eval 340 2 [0]).1 matches .assumptionRejected _
+#guard (v_long_called.eval 4294967195 20 [0, 0]).1 matches .assertionFailed _
+#guard (v_long_called.eval 340 20 [0, 0]).1 matches .assumptionRejected _
 
 namespace CallProofs
 

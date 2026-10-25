@@ -3,6 +3,7 @@
 #include <solvers/flattening/boolbv_width.h>
 #include <util/arith_tools.h>
 #include <util/bitvector_types.h>
+#include <util/byte_operators.h>
 #include <util/c_types.h>
 #include <util/config.h>
 #include <util/expr_initializer.h>
@@ -230,12 +231,20 @@ struct Printer {
   void mark_addressed(const exprt &e) {
     if (e.id() == ID_symbol) {
       if (e.type().id() == ID_code) fail("function addresses/indirect calls are not implemented");
-      if (model.symbol_table.lookup_ref(to_symbol_expr(e).identifier()).is_static_lifetime)
-        fail("address-taking of global/static storage is unsupported");
+      if (id2string(to_symbol_expr(e).identifier()).rfind("__CPROVER_", 0) == 0)
+        fail("address-taking of CBMC metadata globals is unsupported");
       addressed.insert(to_symbol_expr(e).identifier());
     } else if (e.id() == ID_member) mark_addressed(to_member_expr(e).compound());
     else if (e.id() == ID_index) mark_addressed(to_index_expr(e).array());
     else if (e.id() != ID_dereference) fail("unsupported addressable expression " + id2string(e.id()));
+  }
+
+  bool constant_initializer(const exprt &e) const {
+    if (e.id() == ID_constant || e.id() == ID_string_constant) return true;
+    if (e.id() != ID_array && e.id() != ID_array_of && e.id() != ID_struct &&
+        e.id() != ID_typecast) return false;
+    return std::all_of(e.operands().begin(), e.operands().end(),
+      [&](const exprt &op) { return constant_initializer(op); });
   }
 
   bool memory_place(const exprt &e) const {
@@ -342,10 +351,14 @@ struct Printer {
               const auto zero = zero_initializer(symbol.type, symbol.location, ns);
               if (zero) initial = *zero;
             }
-            if (!symbol.is_static_lifetime || initial.id() != ID_constant)
-              fail("global requires a constant scalar initializer: " + id2string(id));
+            if (!symbol.is_static_lifetime || !constant_initializer(initial))
+              fail("global requires a constant value initializer: " + id2string(id));
             type(symbol.type);
             globals.emplace(id, initial);
+            if (id2string(id).rfind("__CPROVER_", 0) != 0) {
+              addressed.insert(id);
+              memory_layout(symbol.type);
+            }
             return;
           }
           if (!live[index].count(id)) fail("symbol used outside its definite lifetime: " + id2string(id));
@@ -413,6 +426,15 @@ struct Printer {
   }
 
   std::string address(const exprt &e, std::ostream &out, unsigned indent) {
+    if (e.id() == ID_symbol && globals.count(to_symbol_expr(e).identifier())) {
+      const auto &id = to_symbol_expr(e).identifier();
+      const auto &initial = globals.at(id);
+      auto value = bits(expression(initial, out, indent), initial.type()), tmp = fresh();
+      line(out, indent, "let " + tmp + " ← Memory.staticAddress " + quote(site()) + " " +
+        offset_bits() + " objectBits s.memory " + quote(id2string(id)) + " " + value);
+      line(out, indent, "s := { s with memory := " + tmp + ".2 }");
+      return tmp + ".1";
+    }
     if (e.id() == ID_symbol && addressed.count(to_symbol_expr(e).identifier()))
       return "s." + names.at(to_symbol_expr(e).identifier());
     if (e.id() == ID_dereference)
@@ -495,6 +517,28 @@ struct Printer {
     }
     if (id == ID_string_constant)
       return expression(to_string_constant(e).to_array_expr(), out, indent);
+    if (id == ID_byte_extract_little_endian || id == ID_byte_update_little_endian) {
+      const bool extract = id == ID_byte_extract_little_endian;
+      const auto &value = e.operands().at(0), &offset = e.operands().at(1);
+      const auto byte_width = extract ? to_byte_extract_expr(e).get_bits_per_byte() :
+        to_byte_update_expr(e).get_bits_per_byte();
+      if (byte_width != 8) fail("byte operators require eight-bit bytes");
+      memory_layout(value.type());
+      memory_layout(e.type());
+      auto old = bits(expression(value, out, indent), value.type());
+      auto index = index_value(offset, out, indent);
+      auto constant = offset.id() == ID_constant ? "true" : "false";
+      if (extract) {
+        auto tmp = fresh();
+        line(out, indent, "let " + tmp + " ← byteExtract " + quote(site()) + " " +
+          std::to_string(width(e.type())) + " " + old + " " + index + " " + constant);
+        return from_bits(tmp, e.type());
+      }
+      const auto &update = e.operands().at(2);
+      memory_layout(update.type());
+      auto replacement = bits(expression(update, out, indent), update.type());
+      return from_bits("(byteUpdate " + old + " " + index + " " + replacement + " " + constant + ")", e.type());
+    }
     if (id == ID_index) {
       const auto &a = to_index_expr(e);
       if (a.array().type().id() != ID_array)
@@ -621,6 +665,26 @@ struct Printer {
       return "(Pointer.add " + offset_bits() + " " + pointer + " (" + delta + " * " +
         std::to_string(byte_size(to_pointer_type(e.type()).base_type())) + "))";
     }
+    if (id == ID_and || id == ID_or) {
+      if (e.operands().empty()) return id == ID_and ? "true" : "false";
+      auto value = expression(e.operands()[0], out, indent);
+      for (std::size_t n = 1; n < e.operands().size(); ++n) {
+        std::ostringstream branch;
+        auto next = expression(e.operands()[n], branch, indent + 2);
+        if (branch.str().empty())
+          value = "(" + value + (id == ID_and ? " && " : " || ") + next + ")";
+        else {
+          auto tmp = fresh();
+          auto condition = id == ID_and ? value : "(!" + value + ")";
+          line(out, indent, "let " + tmp + " ← if " + condition + " then do");
+          out << branch.str();
+          line(out, indent + 2, "pure " + next);
+          line(out, indent, "else pure " + std::string(id == ID_and ? "false" : "true"));
+          value = tmp;
+        }
+      }
+      return value;
+    }
     std::vector<std::string> args;
     for (const auto &op : e.operands()) args.push_back(expression(op, out, indent));
     if (args.size() == 1) {
@@ -683,8 +747,6 @@ struct Printer {
     else if (id == ID_bitand) op = "&&&";
     else if (id == ID_bitor) op = "|||";
     else if (id == ID_bitxor) op = "^^^";
-    else if (id == ID_and) op = "&&";
-    else if (id == ID_or) op = "||";
     else if (id == ID_xor || id == ID_notequal) op = "!=";
     else if (id == ID_equal) op = "==";
     else if (id == ID_implies && args.size() == 2) return "(!" + args[0] + " || " + args[1] + ")";
@@ -898,12 +960,17 @@ struct Printer {
     out << "  deriving Repr, BEq\n\nabbrev Frame := PC × Locals\n\n";
   }
 
-  void blocks(std::ostream &out, unsigned indent) {
+  void blocks(std::ostream &target, unsigned branch_indent, std::ostream *helpers = nullptr) {
     for (auto start : leaders) {
-      line(out, indent, "| " + pc(start) + " =>");
+      std::ostringstream buffer;
+      auto &out = buffer;
+      const unsigned indent = 0;
+      std::vector<std::pair<std::size_t, std::size_t>> boundaries;
+      line(target, branch_indent, "| " + pc(start) + " =>");
       for (std::size_t index = start; ; ++index) {
         if (index != start && leaders.count(index)) { transfer(out, indent + 2, index); break; }
         if (!reachable.count(index)) fail("internal block partition error");
+        boundaries.emplace_back(static_cast<std::size_t>(buffer.tellp()), index);
         current = instructions.at(index);
         const auto &i = *current;
         // The executable diagnostic below retains the full property text.
@@ -941,7 +1008,7 @@ struct Printer {
           if (!(i.condition() == true)) transfer(out, indent + 2, index + 1);
           break;
         } else if (i.is_end_function()) {
-          for (const auto &id : addressed)
+          for (const auto &id : addressed) if (!globals.count(id))
             line(out, indent + 2, "s := { s with memory := s.memory.release " + offset_bits() + " s." + names.at(id) + " }");
           auto result = [&](const std::string &value) {
             if (calls) return "return .returned (." + identifier(function_name) + " (" + value + ", s.memory))";
@@ -966,6 +1033,16 @@ struct Printer {
         } else if (calls && body_call(i)) {
           print_call(i, index + 1, out, indent + 2);
           break;
+        } else if (i.is_other() && i.code().get_statement() == ID_array_copy) {
+          const auto &args = i.code().operands();
+          if (args.size() != 2 || args[0].type().id() != ID_pointer || args[1].type().id() != ID_pointer)
+            fail("unsupported array_copy signature");
+          auto dst = expression(args[0], out, indent + 2);
+          auto src = expression(args[1], out, indent + 2);
+          auto tmp = fresh();
+          line(out, indent + 2, "let " + tmp + " ← Memory.arrayCopy " + quote(site()) + " " +
+            offset_bits() + " s.memory " + dst + " " + src);
+          line(out, indent + 2, "s := { s with memory := " + tmp + " }");
         } else if (i.is_other() && i.code().get_statement() == ID_expression) {
           expression(to_code_expression(i.code()).expression(), out, indent + 2);
         } else if (i.is_dead() && addressed.count(i.dead_symbol().identifier())) {
@@ -979,6 +1056,23 @@ struct Printer {
           fail("unsupported instruction " + kind.str());
         }
       }
+      const auto text = buffer.str();
+      std::size_t begin = 0;
+      // Name straight-line prefixes, without adding PCs, fuel steps or changing effects.
+      // Expression temporaries are local to a GOTO instruction; only Locals crosses a boundary.
+      for (const auto &[end, index] : boundaries) {
+        if (!helpers || std::count(text.begin() + begin, text.begin() + end, '\n') < 100) continue;
+        const auto name = "chunk_" + identifier(function_name) + "_b" + std::to_string(index);
+        const auto locals_type = calls ? module + identifier(function_name) + ".Locals" : "Locals";
+        *helpers << "def " << name << " (initial : " << locals_type << ") : Action "
+                 << locals_type << " := do\n  let mut s := initial\n"
+                 << text.substr(begin, end - begin) << "  pure s\n\n";
+        line(target, branch_indent + 2, "s ← " + name + " s");
+        begin = end;
+      }
+      std::istringstream tail(text.substr(begin));
+      for (std::string text_line; std::getline(tail, text_line);)
+        line(target, branch_indent, text_line);
     }
     current = nullptr;
   }
@@ -1005,9 +1099,11 @@ struct Printer {
     abi(out);
     const std::string output = memory ? "Output" : "Result";
     declarations(out);
+    std::ostringstream body;
+    blocks(body, 2, reachable.size() > 256 ? &out : nullptr);
     out << "def step (frame : Frame) : Action (Next Frame " << output << ") := do\n"
-        << "  let (pc, initial) := frame\n  let mut s := initial\n  match pc with\n";
-    blocks(out, 2);
+        << "  let (pc, initial) := frame\n  let mut s := initial\n  match pc with\n"
+        << body.str();
     initial_definition(out);
     std::string binders, arguments;
     for (const auto &id : function.parameter_identifiers) {
@@ -1075,14 +1171,30 @@ std::string print_lean(const goto_modelt &model, const std::string &function) {
   for (const auto &[name, p] : functions)
     out << "  | " << identifier(name) << " (value : " << module << identifier(name) << ".Output)\n";
   out << "\nabbrev Output := " << module << identifier(function) << ".Output\n"
-      << "abbrev Frame := CallState Activation Value\n\n"
-      << "def body (frame : Activation) : Action (Transfer Activation Value) := do\n"
-      << "  match frame with\n";
+      << "abbrev Frame := CallState Activation Value\n\n";
+  std::size_t instruction_count = 0;
+  for (const auto &[name, p] : functions) instruction_count += p->reachable.size();
+  // Keep small models inline for direct proofs; bound declaration size in larger models.
+  const bool split = instruction_count > 256;
+  std::ostringstream body;
+  body << "def body (frame : Activation) : Action (Transfer Activation Value) := do\n"
+       << "  match frame with\n";
   for (auto &[name, p] : functions) {
-    out << "  | ." << identifier(name) << " frame =>\n"
-        << "    let (pc, initial) := frame\n    let mut s := initial\n    match pc with\n";
-    p->blocks(out, 4);
+    body << "  | ." << identifier(name) << " frame =>\n";
+    if (split) {
+      std::ostringstream blocks;
+      p->blocks(blocks, 4, &out);
+      out << "def body_" << identifier(name) << " (frame : " << module << identifier(name)
+          << ".Frame) : Action (Transfer Activation Value) := do\n"
+          << "    let (pc, initial) := frame\n    let mut s := initial\n    match pc with\n"
+          << blocks.str() << '\n';
+      body << "    body_" << identifier(name) << " frame\n";
+    } else {
+      body << "    let (pc, initial) := frame\n    let mut s := initial\n    match pc with\n";
+      p->blocks(body, 4);
+    }
   }
+  out << body.str();
   out << "\ndef finish (value : Value) : Action Output := do\n  match value with\n"
       << "  | ." << identifier(function) << " result => pure result\n";
   if (functions.size() > 1)

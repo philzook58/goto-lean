@@ -17,6 +17,18 @@ for n in [0, 1, 2, 3, 16, 31, 32, 63, 64, 127, 256]:
         xs = sorted(rng.choices([-2**31, -100, -1, 0, 1, 100, 2**31-1], k=n))
         for key in [-2**31, -1, 0, 1, 2**31-1]:
             cases.append((xs, key))
+# Include the exact named search witnesses, rather than maintaining another table.
+rows = subprocess.run(["lake", "env", "lean", "-j1", "-M1024", "--run",
+                       "Cases/Inputs.lean", "sorted"],
+                      text=True, capture_output=True, timeout=120)
+if rows.returncode:
+    raise SystemExit(rows.stdout + rows.stderr)
+for line in rows.stdout.splitlines():
+    if "|" not in line:
+        continue
+    n, key, pivot, *xs = map(int, line.split("|", 1)[1].split())
+    assert len(xs) == n
+    cases.append((xs, key))
 inputs = "".join(" ".join(map(str, [len(xs), key, *xs])) + "\n" for xs, key in cases)
 expected = [" ".join(map(str, [bisect.bisect_left(xs, key), *reversed(xs)]))
             for xs, key in cases]

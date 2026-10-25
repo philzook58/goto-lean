@@ -38,6 +38,9 @@ False assumptions discard paths, so review the assumptions as part of the claim.
 Now open [Generated/Add.lean](../examples/checks/Generated/Add.lean). Search for
 `checked_add.overflow.1` and `checked_add.assertion.1`: these are the two checks
 proved above. Above each operation is its original C location.
+This one generated file is kept in the repository so you can browse it before
+building. `make check` regenerates it; proofs still live separately. Other
+generated modules remain build artifacts.
 
 | Lean you will see | Meaning |
 | --- | --- |
@@ -55,6 +58,16 @@ literal rather than relying on a C++ simplification pass.
 Optional comparison, with CBMC installed: `make -C examples/checks cbmc`.
 Both tools see the same instrumented binary. This straight-line demo is easy for
 both; it demonstrates the workflow, not a performance advantage.
+
+`make check` also checks [Cases.lean](../examples/checks/Cases.lean): twenty named
+admitted inputs for abs, add, division and shift, plus all four valid indices.
+Each row has a kernel-checked **completed execution**. Every encountered assumption
+and assertion must pass; rejection or exhausted fuel cannot satisfy the certificate.
+The same 84 rows run against compiled C, with C assumptions/assertions enabled.
+Six excluded boundary cases are checked separately. These witnesses help detect
+accidentally empty or overly restricted domains; they are not a branch-coverage score.
+Each witness uses explicit nondeterministic choices. It establishes that a
+completed execution exists, not that every possible choice is admitted.
 
 ## 2. A real failed check
 
@@ -96,6 +109,27 @@ The metadata condition is only needed for nonempty arrays. The proof also covers
 zero length with a null pointer. These are explicit caller obligations, not
 assumptions silently added to the program.
 
+The `/*@ ... */` loop comments in the C are upstream **ACSL annotations for
+Frama-C**. CBMC/goto-lean ignore them. This workflow does not machine-check those
+comments; the Lean invariants and contract were written and proved separately.
+
+Read the Lean statement from the outside inward. `∀` means “for every”; each
+`→` before the conclusion means “provided that.”
+
+| Part of the statement | Read it as |
+| --- | --- |
+| `base`, `length`, `value`, `before`, `xs` | Array address, element count, fill value, initial memory, arbitrary original contents |
+| `WordsAt before base length.toNat xs` | The initial memory contains all `length` readable 32-bit elements |
+| `Pointer.offset 56 base + 4*length.toNat < 2^56` | The byte range fits without wrapping; this model uses four-byte ints and 56 offset bits |
+| `0 < length.toNat → ObjectState before base` | For nonempty arrays, the object's size is representable and its ID is not recorded as freed/dead |
+| `∃ blocks, finishes ...` | Every admitted execution passes its checks and completes within some bound; the bound may depend on the input |
+| `WordsAt after ... (fun _ ↦ value)` | Every final element equals the requested value |
+| `Frame before after ...` | Final bytes outside the array are unchanged, including other objects |
+
+`Frame` does not forbid temporarily writing elsewhere and restoring those bytes,
+or promise to preserve every memory-metadata field. This statement uses a specific
+ABI and model, whose agreement with C/CBMC remains a separate trust boundary.
+
 `CheckedFill.implements` in [the separate proof](../examples/arrays/Proofs/CheckedFill.lean)
 connects the generated program to that contract. `CheckedFill.safe` establishes
 unbounded safety of the actual instrumented entry point, including all six
@@ -113,3 +147,39 @@ and its [short contract](../examples/arrays/Spec/Caller.lean). It allocates four
 calls fill and checks both endpoints, for every input value without assumptions.
 The adjacent bug fills only three elements of a zero-initialized array; input 1
 reaches its named assertion failure. Both claims are checked by the same array workflow.
+
+### How do I know the specification is enough?
+
+Lean cannot decide this for you. Write down the required behavior before the proof,
+then ask which clause rejects each plausible wrong implementation:
+
+| Wrong implementation | Clause that should reject it |
+| --- | --- |
+| Do nothing, stop early, or write the wrong value | Every element equals `value` |
+| Write one element past the end | Imported safety checks and/or the byte frame |
+| Corrupt a neighboring object | Byte frame |
+| Loop forever | Completion via `finishes` |
+
+These rows are review questions, not a claim that all these mutants have separate
+checked certificates. The existing caller has a certified underfill failure;
+[the edit experiment](../examples/arrays/FILL_EDITS.md) records the off-by-one case.
+
+You should not have to invent the pointer-layout and metadata premises yourself.
+Reuse the existing buffer contract; the implementation-proof author must explain
+why each premise is needed. In this example, `WordsAt` supplies element bounds,
+nonwrapping preserves the pointer arithmetic, and `ObjectState` discharges the
+imported lifetime/object-size checks. A new unexplained premise is a review issue.
+
+The [array input tables](../examples/arrays/Cases/Inputs.lean) provide twenty
+named cases per algorithm, with separate proofs of memory premises, representable
+sizes, valid pivots and sortedness where required. [Cases.lean](../examples/arrays/Cases.lean)
+certifies all 140 completed executions of the instrumented algorithms. Their rows
+also feed the native C/Lean comparisons, which check results, contents and sentinels.
+These small witnesses complement the universal proofs; they do not replace them.
+
+Preconditions need the opposite challenge: do they exclude inputs you actually
+need? The proved caller establishes fill's premises from its own allocation,
+without input assumptions. That demonstrates a useful application, but does not
+establish that every intended caller is admitted. Ask for more caller proofs as
+your use cases grow. Review memory premises separately from product requirements;
+do not accept an extra assumption merely because it makes a proof pass.

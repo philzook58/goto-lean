@@ -1,84 +1,66 @@
 # Use your own C
 
-Start with one function and a precise claim. Use CPROVER assumptions for caller
-preconditions and assertions for required behavior. Read both before the proof.
-An assumption that excludes the interesting inputs can make a claim useless.
+Start with a sentence describing the intended behavior, admitted inputs and allowed
+memory effects. Put properties in C assertions where practical.
 
-## Translate first
+## Generate
 
-From the repository root, for a function `process` in `input.c`:
+After the [one-time build](../README.md#build-once), from the repository root:
 
 ```sh
-mkdir -p build/try
-build/bin/goto-cc -std=c11 -c input.c -o build/try/raw.gb
-build/bin/goto-instrument --pointer-check --bounds-check --signed-overflow-check \
-  --div-by-zero-check --undefined-shift-check build/try/raw.gb build/try/checked.gb
-build/bin/goto-instrument --show-properties build/try/checked.gb
-build/bin/goto-lean build/try/checked.gb --function process -o build/try/Process.lean
-lake env lean -o build/try/Process.olean build/try/Process.lean
+python3 tools/translate.py input.c --function process --out build/try
 ```
 
-This last command only type-checks the generated program. It does **not** prove
-its assertions. Inspect the actual property list: enabling a flag does not mean
-it inserted a check, and this policy does not enable every optional CBMC check.
-Pointer-indexed arrays need pointer instrumentation; bounds checks alone may add nothing.
-Unsupported reachable constructs produce an error rather than a partial translation.
+This retains raw/instrumented GOTO, a property inventory, and a checked `Model.lean`.
+It creates a separate `Spec.lean` and Lake project, preserving your spec on reruns.
+In an already-open VS Code file, restart the Lean file server after generation.
+Failed generation leaves the previous model in place; check the command's result.
 
-## Keep three things separate
+Use a dedicated output directory. For lasting work, put it outside ignored `build/`
+and commit the spec, Lake configuration and toolchain; ignore regenerated models.
+Repeat `--cc-arg=-I/path` or `--cc-arg=-DMACRO=value` for frontend arguments.
 
-| File | Read it to answer |
-| --- | --- |
-| C source | What code, assumptions and assertions do I mean? |
-| Generated Lean | What executable model and checks did the tool emit? |
-| Handwritten proof | Why do those checks hold, or where can one fail? |
+Read the generated checks before proving anything. The wrapper enables pointer,
+bounds, signed-overflow, division and shift checks; it does not enable every CBMC
+option. The inventory includes the whole translation unit, not just the selected
+entry. See [coverage and limits](../COMPATIBILITY.md).
 
-Add a small `Spec.lean` **when it helps** express an overall result, memory framing,
-termination or caller memory obligations. Its job is a readable contract; it
-should not repeat C assertions unnecessarily. For the simple C-first tutorial,
-the assertions already are the specification, so no separate Spec file is needed.
+## Start with executions
 
-Use `LEAN_PATH=build/try lake env lean YourProof.lean` to import `Process` from a
-handwritten harness. Keep proofs outside generated files. Start from the
-[small C assertion proofs](../examples/checks/Proofs.lean); for loops, use the
-[checked fill proof](../examples/arrays/Proofs/CheckedFill.lean) and existing ranking rules.
-This is manual verification with reusable lemmas, not an automatic C-to-proof command.
+Run the same boundary cases and seeded random inputs through native C and Lean.
+Use native `-O0`, `-O2`, and ASan/UBSan where supported; compare relevant memory
+as well as return values. Keep failing inputs and fuzz after smoke tests pass.
+For signed maximum, include negative numbers and `INT_MIN`/`INT_MAX`.
 
-## Change, regenerate, check
+For a translated `mymax`, the spec can start with:
 
-After a C edit, regenerate the instrumented GOTO and Lean, then rebuild the proof.
-For the examples, `make check` does this. Repair a failed local obligation rather
-than adding an assumption or weakening the contract to make the build pass.
-Keep a successful case and a buggy case that certifies the **intended property**.
-The checked examples also write [local Lean receipts](RECEIPTS.md); `make status`
-rejects stale source/configuration, artifacts or proofs. Their reviewed property
-policies must change explicitly if expected coverage changes. `lake build` alone
-does not create such a receipt.
+```lean
+import Model
 
-Distinguish the result you obtained:
+#guard (v_mymax.eval 42 43 10 []).fst.getValue? == some 43
+#guard (v_mymax.eval (.ofInt 32 (-3)) (.ofInt 32 (-2)) 10 []).fst.getValue?
+  == some (.ofInt 32 (-2))
+```
 
-- A returned replay checks one execution; `exhausted` or `assumptionRejected` is not one.
-- An `Executes` theorem certifies an execution, not all executions.
-- `run ... .wp` proves safety/partial correctness and can allow divergence.
-- `finishes` additionally establishes completion, for paths admitted by assumptions.
-- A bounded CBMC result is scoped to its bounds; check unwinding assertions too.
+The starter has `ExampleRuns`, `BoundedExec` and `Specs` sections. Replace default
+inputs, choices, memory and expected results with meaningful ones. A rejected
+assumption, missing choice or exhausted run is not a successful example.
 
-The C frontend, printer and memory-model fidelity remain trust boundaries.
-Generated Lean's successful compilation is not a proof of translation correctness.
-Use the [confidence review](CONFIDENCE.md) when reporting results. Its
-[next steps](CONFIDENCE.md#next-steps) distinguish current safeguards from proposed work.
+## Prove and recheck
 
-## A short prompt for an AI
+Use the [proof guide](AGENT_GUIDE.md) for finite completion, loop invariants and
+counterexamples, or follow the [runnable tutorials](TUTORIAL.md). The starter's
+bounded `simp <;> bv_decide` sketch helps explore small bitvector goals; Lean
+4.35.0's `bv_decide` may add native axioms rejected by our final audit.
 
-> Verify `process` in this C file using goto-lean. Keep the C assumptions and
-> assertions as the specification. State any necessary memory preconditions
-> explicitly. Generate instrumented GOTO and retain its source/property IDs.
-> Keep proof code separate; reuse existing Lean lemmas. Include a successful
-> control and a certified failure of a named property in a buggy variant.
-> Do not add axioms, leave `sorry`, or weaken the claim to get a green build.
-> Report the exact theorem, checked commands, artifact/configuration identity,
-> admitted inputs, feasible controls and remaining gaps. Add `#check_axioms` for
-> the public claims and report which declarations were audited.
-> Call out any changed assumptions or contract rather than claiming the same result.
+The wrapper prints the command to check your spec. Audit named final claims with
+the [skill checker](../.agents/skills/goto-lean/scripts/check_spec.py). Review the
+statement as well as the proof: `Executes` describes one execution, `.wp` states
+safety and partial correctness, and `finishes` adds completion under assumptions.
+Memory premises need a caller or an explicit explanation.
 
-Judge the result by the C, the contract and the checked theorem header. Proof
-length and a confident explanation are not evidence that the intended claim holds.
+Regenerate after C edits, rerun comparisons, and keep a deliberate failing case
+that challenges the intended guarantee. For borrowed examples, record attribution
+and changes beside the code; see [example guidelines](../AGENTS.md).
+[Receipts](RECEIPTS.md) detect stale artifacts in the supported example runners;
+[confidence limits](CONFIDENCE.md) explain what even a checked proof leaves open.

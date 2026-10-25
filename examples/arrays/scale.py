@@ -12,21 +12,38 @@ for n in [8, 16, 32, 64]:
     arrays.extend([sorted(rng.choices(range(-9, 10), k=n)), list(range(n, 0, -1)), [1]*n])
     arrays.extend(rng.choices([-2**31, -1, 0, 1, 2**31-1], k=n) for _ in range(5))
 cases, expected = [], []
-for xs in arrays:
+def add_cases(xs, keys, pivots):
     n = len(xs)
     prefix = next((i for i in range(1, n) if xs[i-1] > xs[i]), n)
-    for key in [-2**31, -1, 0, 1, 2**31-1]:
+    for key in keys:
         cases.append(("fill", n, key, *xs))
         expected.append([0, *([key]*n)])
         cases.append(("find", n, key, *xs))
         expected.append([xs.index(key) if key in xs else n, *xs])
     cases.append(("prefix", n, 0, *xs))
     expected.append([prefix, *xs])
-    for pivot in sorted({0, n//2, n}):
+    for pivot in pivots:
         cases.append(("rotate", n, pivot, *xs))
         expected.append([n-pivot, *xs[pivot:], *xs[:pivot]])
     cases.append(("sort", n, 0, *xs))
     expected.append([0, *sorted(xs)])
+    cases.append(("reverse", n, 0, *xs))
+    expected.append([0, *reversed(xs)])
+
+for xs in arrays:
+    n = len(xs)
+    add_cases(xs, [-2**31, -1, 0, 1, 2**31-1], sorted({0, n//2, n}))
+# The exact same named rows are certified in Cases.lean.
+rows = subprocess.run(["lake", "env", "lean", "-j1", "-M1024", "--run", "Cases/Inputs.lean"],
+                      text=True, capture_output=True, timeout=120)
+if rows.returncode:
+    raise SystemExit(rows.stdout + rows.stderr)
+for line in rows.stdout.splitlines():
+    if "|" not in line:
+        continue
+    n, key, pivot, *xs = map(int, line.split("|", 1)[1].split())
+    assert len(xs) == n
+    add_cases(xs, [key], [pivot])
 inputs = "".join(" ".join(map(str, case))+"\n" for case in cases)
 expected = [" ".join(map(str, result)) for result in expected]
 for command in [[".lake/scale"], ["lake", "env", "lean", "--run", sys.argv[1] if len(sys.argv) > 1 else "Scale.lean"]]:

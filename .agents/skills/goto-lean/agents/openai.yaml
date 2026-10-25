@@ -1,0 +1,3 @@
+interface:
+  display_name: "goto-lean"
+  short_description: "Translate C, replay models, and prove GOTO properties"

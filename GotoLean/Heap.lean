@@ -2,6 +2,20 @@ import GotoLean.Memory
 
 namespace GotoLean.Memory
 
+/-- CBMC array_copy between whole objects: truncate or extend with fresh arbitrary bytes.
+This first slice requires base pointers; it does not model interior/subobject array views. -/
+def arrayCopy (site : Site) (offsetBits : Nat) (m : Memory) (dst src : BitVec w) :
+    Action Memory := do
+  check (site ++ "; array_copy base objects")
+    (m.valid offsetBits dst 0 && m.valid offsetBits src 0 &&
+      decide (Pointer.offset offsetBits dst = 0 ∧ Pointer.offset offsetBits src = 0))
+  let destination := (m.bytes (Pointer.object offsetBits dst)).getD #[]
+  let source := (m.bytes (Pointer.object offsetBits src)).getD #[]
+  let extra := destination.size - source.size
+  let padding ← if extra = 0 then pure (0 : BitVec (8*extra))
+    else choose (site ++ "; array_copy padding") (8*extra)
+  pure (m.put (Pointer.object offsetBits dst) (source.extract 0 destination.size ++ unpack padding))
+
 /-- CBMC's allocation primitive always succeeds, with zero or arbitrary initial bytes.
 Finite pointer capacity remains an explicit model check. -/
 def allocate (site : Site) (offsetBits objectBits : Nat) (m : Memory)

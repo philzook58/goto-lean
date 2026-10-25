@@ -41,7 +41,7 @@ cannot all be attributed to surface syntax alone.
 
 ## Checks and limits
 
-CTest runs 621 additional comparisons against the generated programs: 36 maximum,
+This opt-in experiment runs 621 comparisons against the generated programs: 36 maximum,
 195 countdown across three encodings, and 390 irreducible-graph cases. The generated
 programs already undergo the native C differential suite. Fuel is deliberately
 ample; collapsing blocks changes the amount of fuel consumed. The maximum

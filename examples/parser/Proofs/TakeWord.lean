@@ -229,24 +229,24 @@ private theorem blocks (input : Input) (scan : Scan input.bytes) (ready : Ready 
     exact ⟨hc, ho, hcap, hq, hp, hm, scan.start, by omega, by omega, hp⟩
   | b8 =>
     obtain ⟨hstart, hm, i, hlo, hhi, hp⟩ := hs
+    have read (site : Site) (R : BitVec 8 → Prop) := Memory.load_value site input.memory 56
+      (point input i) (byte input.bytes i) (input_value input ready _ i (by omega) rfl) R
     simp only [v_take_word.body, Bind.bind, Action.wp_bind, hm, hp]
-    rw [Memory.load_value _ _ _ _ _ (input_value input ready _ i (by omega) rfl),
-      Memory.load_value _ _ _ _ _ (input_value input ready _ i (by omega) rfl)]
+    rw [read]
     by_cases hlt : i < scan.stop
     · have hb := scan.word i hlo hlt
-      have test : (!((byte input.bytes i != (0 : BitVec 8)) &&
-          (BitVec.signExtend 32 (byte input.bytes i) != (32 : BitVec 32)))) = false := by
-        change (!((!(byte input.bytes i == 0)) &&
-          (!(BitVec.signExtend 32 (byte input.bytes i) == (32 : BitVec 32))))) = false
+      have nonzero : (byte input.bytes i != (0 : BitVec 8)) = true := by simpa using hb.1
+      have nonspace : (BitVec.signExtend 32 (byte input.bytes i) != (32 : BitVec 32)) = true := by
+        change (!(BitVec.signExtend 32 (byte input.bytes i) == (32 : BitVec 32))) = true
         rw [space_test]
-        simp
-        exact hb
-      simp only [test, Bool.false_eq_true, ite_false, Action.wp_pure]
+        simpa using hb.2
+      simp only [nonzero, nonspace, ite_true, Bool.not_true, Bool.false_eq_true, ite_false,
+        Bind.bind, Action.wp_bind, Action.wp_pure, read]
       exact ⟨hc, ho, hcap, hq, hstart, hm, i, hlo, hlt, hp⟩
     · have he : i = scan.stop := by omega
       have hb : byte input.bytes i = 0 ∨ byte input.bytes i = 32 := he ▸ scan.delimiter
       rcases hb with hb | hb <;>
-        simp [hb, Action.wp_pure] <;>
+        simp [hb, space_test, Bind.bind, Action.wp_bind, Action.wp_pure, read] <;>
         exact ⟨hc, ho, hcap, hq, hm, hstart, he ▸ hp⟩
   | b9 =>
     obtain ⟨hstart, hm, i, hlo, hhi, hp⟩ := hs

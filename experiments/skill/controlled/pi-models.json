@@ -1,0 +1,11 @@
+{
+  "providers": {
+    "openrouter": {
+      "modelOverrides": {
+        "google/gemma-4-31b-it": {
+          "maxTokens": 8192
+        }
+      }
+    }
+  }
+}

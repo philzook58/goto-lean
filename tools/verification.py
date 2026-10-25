@@ -65,7 +65,8 @@ def inputs(policy, config, tools):
         path = Path(json.loads(name))
         if path.is_file():
             paths.append(path)
-    return {'files': hashes(paths), 'preprocessed_sha256': digest(text), 'tools': tools}, text
+    return {'files': hashes(paths), 'preprocessed_sha256': digest(text),
+            'object_bits': policy.get('object_bits', 8), 'tools': tools}, text
 
 
 def tool_info():
@@ -130,7 +131,7 @@ def generate(policy, config, tools):
         path = Path(entry['lean'])
         path.parent.mkdir(parents=True, exist_ok=True)
         run([tools['goto-lean']['path'], WORK / 'checked.gb', '--function', entry['function'],
-             '-o', path])
+             '--object-bits', str(policy.get('object_bits', 8)), '-o', path])
         emitted = sorted(set(re.findall(r'\bcheck\s+"[^"\n]*; property ([^;]+);', path.read_text())))
         functions = entry.get('functions', [entry['function']])
         expected = {p['name'] for p in props if p['sourceLocation']['function'] in functions}

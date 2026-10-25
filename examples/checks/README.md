@@ -32,6 +32,13 @@ assertion is never treated as an assumption.
 A false assumption discards its path. Thus `checked_abs(INT_MIN)` is excluded,
 not proved to return a valid result. The assumed domain is nonempty for every
 example. No source assumption is inferred from a desired assertion.
+[`Cases.lean`](Cases.lean) makes useful admitted inputs concrete: twenty named
+rows for abs, add, division and shift, and all four valid indices. Every row has
+a kernel-checked returned execution, so every reached assumption and assertion
+passes. Six excluded inputs must instead reach an assumption rejection.
+`make check` also compares these exact 84 rows with compiled C via `compare.py`;
+native assumptions and assertions are enabled. This establishes sample feasibility,
+not completeness of the intended domain or branch coverage.
 These functions are straight-line programs, so CBMC also proves their complete
 input domains without loop annotations. This is a coverage demonstration, not
 a benchmark claiming an advantage over CBMC.

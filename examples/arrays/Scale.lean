@@ -28,6 +28,8 @@ private def replay (op : String) (numbers : List Int) : IO String := do
       returned (v_is_sorted_until.eval p length (4*(n+2)) choices m).1 BitVec.toNat
     | "rotate" =>
       returned (v_rotate.eval p (.ofInt 32 argument) length (32*(n+1)+50) choices m).1 BitVec.toNat
+    | "reverse" =>
+      returned (v_reverse.eval p length (4*(n+1)+4) choices m).1 (fun _ ↦ 0)
     | "sort" =>
       returned (v_bubble_sort.eval p length (5*((n+1)*(n+2)+2)) choices m).1 (fun _ ↦ 0)
     | _ => throw (IO.userError s!"unknown operation: {op}")

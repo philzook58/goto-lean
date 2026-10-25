@@ -4,6 +4,7 @@
 #include <util/arith_tools.h>
 #include <util/bitvector_expr.h>
 #include <util/bitvector_types.h>
+#include <util/byte_operators.h>
 #include <util/cmdline.h>
 #include <util/c_types.h>
 #include <util/config.h>
@@ -79,6 +80,21 @@ int main(int argc, char **argv) {
       }
     }
     const unsignedbv_typet u(8);
+    for (unsigned offset : {0u, 1u, 2u}) {
+      const auto index = from_integer(offset, signedbv_typet(32));
+      const auto word = from_integer(0x12345678, unsignedbv_typet(32));
+      add("byte_extract_" + std::to_string(offset),
+        byte_extract_exprt(ID_byte_extract_little_endian, word, index, 8, unsignedbv_typet(16)));
+      add("byte_update_" + std::to_string(offset),
+        byte_update_exprt(ID_byte_update_little_endian, word, index, from_integer(0xabcd, unsignedbv_typet(16)), 8));
+    }
+    add("byte_extract_partial", byte_extract_exprt(ID_byte_extract_little_endian,
+      from_integer(0x12345678, unsignedbv_typet(32)), from_integer(3, signedbv_typet(32)),
+      8, unsignedbv_typet(16)), false);
+    add("byte_update_dynamic", byte_update_exprt(ID_byte_update_little_endian,
+      from_integer(0x12345678, unsignedbv_typet(32)),
+      side_effect_expr_nondett(signedbv_typet(32), loc),
+      from_integer(0xabcd, unsignedbv_typet(16)), 8), false);
     const array_typet array_type(u, from_integer(3, unsignedbv_typet(32)));
     const array_exprt array({from_integer(7, u), from_integer(19, u), from_integer(31, u)}, array_type);
     for (unsigned i = 0; i < 3; ++i) {

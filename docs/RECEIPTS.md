@@ -9,7 +9,7 @@ make status      # reject a receipt whose current inputs/artifacts no longer mat
 
 The shared runner is `tools/verification.py`, using only Python's standard library.
 Each example's short `verification.json` is reviewed policy: compilation/check
-flags, entries and reachable callee coverage, expected property counts by function
+flags, optional `object_bits` (default 8), entries and reachable callee coverage, expected property counts by function
 and category, proof modules, expected statement types, named claims and scope labels. It does not discover
 what the user intended to verify.
 

@@ -1,11 +1,13 @@
 #include "printer.h"
 #include <goto-programs/goto_model.h>
+#include <goto-programs/initialize_goto_model.h>
 #include <goto-programs/read_goto_binary.h>
 #include <util/cmdline.h>
 #include <util/config.h>
 #include <util/message.h>
 #include <util/version.h>
 #include <filesystem>
+#include <charconv>
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
@@ -16,7 +18,7 @@
 
 int main(int argc, char **argv) {
   try {
-    const std::string help = "Usage: goto-lean INPUT.gb --function NAME -o OUTPUT.lean\n"
+    const std::string help = "Usage: goto-lean INPUT.gb --function NAME [--object-bits N] -o OUTPUT.lean\n"
       "Print a GOTO entry and reachable direct callees as Lean (translation does not verify it).\n";
     if (argc == 2 && std::string(argv[1]) == "--version") {
       std::cout << "goto-lean 0.1.0; CBMC " << CBMC_VERSION << " (" << GOTO_LEAN_CBMC_REV << ")\n";
@@ -25,12 +27,13 @@ int main(int argc, char **argv) {
     if (argc == 1 || (argc == 2 && std::string(argv[1]) == "--help")) {
       std::cout << help; return argc == 1 ? 2 : 0;
     }
-    std::string input = argv[1], function, output;
+    std::string input = argv[1], function, output, object_bits;
     for (int i = 2; i < argc; ++i) {
       std::string key = argv[i];
       if (++i == argc) throw std::runtime_error("option has no value: " + key);
       if (key == "--function" && function.empty()) function = argv[i];
       else if (key == "-o" && output.empty()) output = argv[i];
+      else if (key == "--object-bits" && object_bits.empty()) object_bits = argv[i];
       else throw std::runtime_error("unknown or repeated option: " + key);
     }
     if (function.empty() || output.empty()) throw std::runtime_error(help);
@@ -43,7 +46,18 @@ int main(int argc, char **argv) {
     auto model = read_goto_binary(input, messages);
     if (!model) throw std::runtime_error("cannot read GOTO binary: " + input);
     config.set_from_symbol_table(model->symbol_table);
-    const auto text = print_lean(*model, function);
+    if (!object_bits.empty()) {
+      unsigned value = 0;
+      const auto parsed = std::from_chars(object_bits.data(), object_bits.data() + object_bits.size(), value);
+      if (parsed.ec != std::errc{} || parsed.ptr != object_bits.data() + object_bits.size() ||
+          value == 0 || value >= config.ansi_c.pointer_width)
+        throw std::runtime_error("--object-bits must be positive and less than the input pointer width");
+      config.bv_encoding.object_bits = value;
+      config.bv_encoding.is_object_bits_default = false;
+    }
+    // Match CBMC when a loaded binary's allocation limit uses a different split.
+    update_max_malloc_size(*model, messages);
+    const auto text = "-- CBMC " + config.object_bits_info() + "\n" + print_lean(*model, function);
     // Publish only after validation/translation, using a same-directory temporary file.
     std::vector<char> pattern(output.begin(), output.end());
     const std::string suffix = ".tmp.XXXXXX";

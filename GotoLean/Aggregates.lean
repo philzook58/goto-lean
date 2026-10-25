@@ -21,6 +21,28 @@ def arrayRead (site : Site) (count width : Nat) (value : BitVec n) (index : Int)
     pure (BitVec.extractLsb' (index.toNat * width) width value)
   else choose site width
 
+/-- Little-endian extraction preserves available bits and chooses missing bits independently. -/
+def byteExtract (site : Site) (width : Nat) (value : BitVec n) (index : Int)
+    (constant : Bool) : Action (BitVec width) := do
+  let offset := index * 8
+  if 0 ≤ offset ∧ offset + width ≤ n then
+    pure (BitVec.extractLsb' offset.toNat width value)
+  else
+    let unknown ← choose site width
+    if !constant && index < 0 then pure unknown
+    else pure ((List.range width).foldl (fun result (i : Nat) ↦
+      let bit := offset + (i : Int)
+      if 0 ≤ bit ∧ bit < n then
+        replaceBits result i (BitVec.extractLsb' bit.toNat 1 value)
+      else result) unknown)
+
+/-- CBMC's constant updates require the truncated field to fit; variable updates clip at the end. -/
+def byteUpdate (old : BitVec n) (index : Int) (value : BitVec w)
+    (constant : Bool) : BitVec n :=
+  if 0 ≤ index ∧ (!constant || index * 8 + min n w ≤ n) then
+    replaceBits old (index.toNat * 8) value
+  else old
+
 @[spec] theorem arrayRead_spec (site : Site) (count width : Nat) (value : BitVec n)
     (index : Int) (Q : BitVec width → Prop) :
     ⦃if 0 ≤ index ∧ index < count then

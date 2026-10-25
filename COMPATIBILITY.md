@@ -12,7 +12,50 @@ be an explicit part of the input pipeline, with the resulting GOTO available
 for inspection. No control-flow folding or choice elimination is hidden in the
 printer.
 
+## ESBMC: feasibility probe, not a supported frontend
+
+Tested the installed ESBMC 8.4.0 against our pinned CBMC 6.11.0. ESBMC's
+[8.4 release](https://github.com/esbmc/esbmc/releases/tag/v8.4) adds a reader
+for CBMC binaries; that is the opposite direction from importing ESBMC output.
+Its [writer](https://github.com/esbmc/esbmc/blob/v8.4/src/goto-programs/write_goto_binary.cpp)
+emits `GBF` with format version 1; CBMC expects `0x7f GBF` with version 6.
+These are separate serializers, not a header that can safely be patched.
+
+The probe used `int mymax(int x, int y) { return x > y ? x : y; }` and a
+`main` asserting `mymax(42,43) == 43`:
+
+| Route | Observed result |
+| --- | --- |
+| ESBMC `--output-goto` → goto-lean | Rejected: `not a goto binary`. |
+| ESBMC `--goto2c --no-library --skip-bmc` → goto-cc → goto-lean | Scalar C maximum translated; Lean checked its result for all signed 32-bit inputs. |
+| Python maximum → ESBMC `--goto2c --skip-bmc --python python3` → goto-cc | Export included about 10,700 lines of runtime code and failed C parsing (`} int;`). Disabling the library crashed this installed exporter. |
+| CBMC binary → ESBMC `--binary` | Reader accepted the file, but verification aborted with `main symbol not found`, including with `--function main`. |
+
+For the successful C export only, the manual adapter removed the version banner
+and supplied `esbmc_intrinsics.h` containing
+`#define assert(c) __CPROVER_assert((c), #c)`. It disabled ESBMC's library; it did
+not replace library behavior with empty stubs. The Lean proof establishes the
+exported maximum's behavior, not equivalence to ESBMC or Python. ESBMC returned
+exit code 6 on some successful export-only commands, so file creation alone
+must not be used as a general success test. Probe artifacts are disposable under
+`build/esbmc-probe/`; there is no ESBMC dependency in the build or CI.
+
+An ESBMC backend is possible, but it needs an explicit, version-pinned adapter
+for instructions, types, expressions and runtime operations. Reuse the Lean
+execution/proof library, reject unknown semantics, and compare positive and
+negative executions before expanding the supported subset. The C-export route
+is useful for experiments; these results do not justify a general-purpose
+bridge or a claim of additional language support yet.
+
 ## Current coverage
+
+The [Frama-C collection examples](examples/case-studies/README.md) exercise jsmn,
+2048 row moves, and khash lookup against native C. They include real and deliberate
+violations. Full pointer-instrumented jsmn now compiles and executes under the
+current Lean memory budget; its kernel counterexample replay still uses a lighter,
+explicitly documented profile. Khash resizing remains blocked by floating-point
+arithmetic. See that example's scope table before interpreting its comparisons
+or CBMC results.
 
 | Area | Status |
 | --- | --- |
@@ -26,13 +69,15 @@ printer.
 | Nondeterministic values | Implemented for supported finite value types |
 | Effectful expression statements | Supported when the contained expression is supported |
 | Address-taking, pointer arithmetic, dereferences, aliasing | Initial little-endian object memory implemented; see below |
-| Globals/statics and initialization | Constant scalar value globals implemented; addresses and nonconstant initialization rejected |
+| Globals/statics and initialization | Persistent addressable globals/statics with constant scalar, array, string and struct initializers; nonconstant initialization rejected |
 | Direct calls, recursion, mutual recursion | Implemented with a Lean call stack |
 | Indirect/variadic calls, unknown externals | Unimplemented |
 | External malloc/free | Executable heap model, failure/success, arbitrary initial bytes, bounds and lifetime checks |
-| Allocation primitive, loaded malloc/free/calloc bodies | Implemented with CBMC failure policies, zero initialization and imported checks |
-| Variable-length arrays, realloc, remaining allocation mechanisms | Unimplemented |
-| Byte extract/update, bitfields and remaining value operators | Incomplete |
+| Allocation primitive, loaded malloc/free/calloc/realloc bodies | Implemented with CBMC failure policies, zero initialization and imported checks |
+| Imported end-of-program leak checks | Executed in the translated startup wrapper |
+| Variable-length arrays, remaining allocation mechanisms | Unimplemented |
+| Byte extract/update | Little-endian eight-bit operations on supported byte layouts; partial extracts retain arbitrary missing bits |
+| Bitfields and remaining value operators | Incomplete |
 | Floating/fixed-point, vectors and other specialized types | Incomplete |
 | External memcpy / strlen | Checked Lean models when no GOTO body is supplied |
 | Remaining library models and OTHER instructions | Mostly unimplemented |
@@ -44,6 +89,80 @@ Packed values use the pinned CBMC `boolbv_widtht` implementation rather than
 duplicating layout rules in the printer. Only that small upstream implementation
 is compiled into the printer; its SAT backend is not needed. The aggregate
 helpers are ordinary Lean definitions, with no added axioms or expression AST.
+
+Large models use named function bodies and straight-line prefixes to reduce Lean
+declaration size. Prefixes split only between GOTO instructions and pass the same
+locals through ordinary `Action` binds. They do not introduce PCs, change fuel
+counts, simplify conditions or remove checks; small models remain inline.
+
+Little-endian eight-bit byte extract/update reuse the same packed bit layout.
+An extract crossing an object's value boundary retains known bits and chooses
+the unavailable bits; it does not silently zero-fill. Updates follow the pinned
+backend's distinction: a constant offset requires the truncated field to fit,
+while a variable offset clips at the end. Negative variable offsets leave updates
+unchanged. Byte operators do not imply memory-safety checks. CBMC constant-expression
+oracle cases and partial/variable-offset Lean replays cover this slice; big-endian
+operators and layouts that disagree with packed byte storage remain rejected.
+
+## CBMC options audit (6.11.0)
+
+This inventory groups the pinned `cbmc --help` and `goto-instrument --help`
+options by what they change. It is not a claim that every combination works.
+`goto-lean` currently accepts only an input, `--function`, `--object-bits` and `-o`, plus help/version.
+Checks must already be present in its GOTO input; passing a check flag to a
+separate CBMC run does not insert that check into the translated program.
+
+| Option family | Translation status / responsibility |
+| --- | --- |
+| Preprocessing, includes, defines, C/C++ dialect, signedness, compiler selection | Upstream frontend options. Supported only when their resulting types/instructions are supported; C++ as a whole is not covered. |
+| Architecture, OS, data model (`--32`, `--64`, `--LP64`, etc.), endianness | Recover ABI from GOTO symbols. Little-endian 32/64-bit cases tested; big-endian memory rejected. Other targets are not certified by accepting their ABI. |
+| `--function`, input-tree depth limits, `--model-argc-argv`, generated harnesses | Entry/harness selection changes the claim. Translate the selected wrapper to include its assumptions and initialization; arbitrary generated harnesses are not covered. |
+| `--object-bits` | Explicit override validated against the input ABI, emitted in Lean and recorded by receipts; 32/64-bit cases tested. |
+| Safety instrumentation | Specific coverage in the table below. An assertion is supported only if its expressions and effects are supported. |
+| `--add-library`, `--no-library`, malloc failure flags | Loaded reachable bodies take precedence; tested allocation policies described below. Unknown external calls are rejected; not all CBMC library bodies translate. |
+| `--nondet-static`, volatile models, MMIO, ISR and function hooks | Resulting GOTO only; no blanket coverage. Nonconstant global initialization and interrupt/concurrency semantics remain gaps. |
+| Inlining, pointer removal, slicing, dropping functions, replacing/removing calls or bodies | Explicit upstream transformations only, with no general conformance claim. Function-pointer elimination may produce supported direct calls; indirect calls themselves remain unsupported. Removing a body/check or adding `assume false` can erase obligations. |
+| Contracts (`--dfcc`, loop contracts, enforce/replace-call-with-contract), loop havoc/acceleration, k-induction | No established end-to-end coverage. Havoced/transformed code proves a claim about that input; replacement contracts require justification. Do not use options advertised as unsound, such as disabling contract side-effect checks, as evidence of source safety. |
+| Threads, weak memory (`--mm`), race instrumentation | Unsupported. |
+| Coverage/test generation (`--cover`, failed-assertion coverage) | No end-to-end coverage; reachability goals differ from safety assertions. |
+| BMC exploration (`--paths`, unwind/depth limits, incremental loops, complexity limits, field sensitivity, caching) | CBMC search controls, not Lean proof parameters. Search bounds/path abandonment do not establish unbounded safety. If loops are unwound in GOTO, Lean sees the transformed program. |
+| SAT/SMT choice, solver processes, refinement, array encodings, formula dumps/statistics | No corresponding printer feature needed for solver selection. String abstraction/refinement and printable-string restrictions have no established translation coverage; floating-point remains unsupported. |
+| Property selection, stop-on-fail, traces/witnesses, localization, reports, IR dumps/validation, XML/JSON, verbosity | Upstream diagnostics/selection; do not change what a Lean theorem proves. Property selection can narrow the CBMC comparison. Exporting symex-ready GOTO is not a certified translation pipeline. |
+
+Safety-check coverage distinguishes exercised instrumentation from merely having
+the necessary value operators. The positive/negative suites exercise particular
+C examples, not every shape a flag can produce.
+
+| Instrumentation flags | Evidence / gap |
+| --- | --- |
+| `--bounds-check`, `--pointer-check` | Positive/negative imported checks in examples and memory tests. Subobject/alignment coverage is not complete. |
+| `--signed-overflow-check`, `--div-by-zero-check`, `--undefined-shift-check` | Positive proofs and deliberate violations in `examples/checks` and `examples/violations`. |
+| `--memory-leak-check` | Positive/negative startup-wrapper execution certificates and CBMC controls; not universal Lean leak-freedom proofs. |
+| `--unsigned-overflow-check`, `--pointer-overflow-check`, `--conversion-check`, `--enum-range-check` | Paired imported-property certificates and CBMC controls in `tests/options.py`; specific addition, pointer arithmetic, narrowing and sparse-enum cases. |
+| `--memory-cleanup-check` | Paired controls for the loaded `exit` body. Its good execution reaches the model's `assume false`, explicitly certified as a rejected path, not a normal return or universal safety proof. |
+| `--pointer-primitive-check` | Default instrumentation exercised by memory tests; not an exhaustive pointer-primitive suite. |
+| `--float-div-by-zero-check`, `--float-overflow-check`, `--nan-check` | Floating-point gap. |
+| `--retain-trivial-checks`, `--error-label` | Ordinary resulting assertions should fit; no dedicated flag-level coverage. |
+| `--uninitialized-check`, `--stack-depth` (goto-instrument) | Not established. Arbitrary stable initial bytes alone do not diagnose uninitialized reads. |
+| `--no-standard-checks`, individual `--no-…-check` switches, `--no-built-in-assertions`, `--no-assertions`, `--no-assumptions`, `--assert-to-assume` | Change the obligations/path domain. The printer cannot recover checks omitted upstream; assertions converted to assumptions are no longer proved. |
+
+`--object-bits N` must match the comparison CBMC run. The GOTO loader selects
+language defaults rather than recovering a custom split. For a 64-bit pointer,
+8 object bits leave 56 offset bits; 16 leave 48. The printer uses CBMC's own
+`update_max_malloc_size` to align `__CPROVER_max_malloc_size` and startup
+initialization with `2^(offsetBits - 1)`, including when using the default split.
+The generated header records the choice. Verification policies may set
+`"object_bits": 12` (default 8); changing it invalidates the receipt.
+
+`tests/options.py` checks the named imported violations in Lean and CBMC, using
+kernel reduction rather than native proof evaluation. It also checks nondefault
+32/64-bit splits, the allocation limit, output preservation on invalid options,
+and finite-ID exhaustion. The latter is a model-capacity failure, not a C bug.
+The tests cover examples, not all programs produced by these flags.
+
+Next gaps include uninitialized-read instrumentation, nonconstant/pointer-valued
+static initialization, remaining library operations and layouts, and allocation
+identity/reuse. Solver/UI switches do not advance executable GOTO coverage.
 
 ## First object-memory slice
 
@@ -57,7 +176,7 @@ memory alongside the ordinary result so buffer/cursor effects can be checked.
 
 Pointers retain native `BitVec` encodings: object bits above byte-offset bits.
 The pointer width follows the input ABI (32 and 64 bits tested); object-bit width
-currently uses CBMC's default configuration. Zero and one are reserved for null
+defaults to eight for C/C++ and accepts `--object-bits N`. Zero and one are reserved for null
 and invalid objects. Offset arithmetic preserves object bits, scales by CBMC's
 element byte size and wraps within the offset field. As in CBMC, ordered
 comparisons between distinct objects return false and their pointer difference
@@ -69,8 +188,9 @@ This is a first executable memory model, not full CBMC memory compatibility:
   bits agree with object bytes. Mixed-width pointers, non-byte fields and layout
   mismatches are rejected. Taking a parameter's address is not implemented yet.
 - Each allocation uses a fresh object ID; released IDs are never reused. The
-  finite ID space can be exhausted, including by repeated declarations in loops.
-  It then fails explicitly. IDs follow this model's allocation order; a
+  default eight-bit ID field has 256 encodings, with two reserved. It can be
+  exhausted, including by repeated declarations in loops. The resulting model
+  capacity check is not an imported C memory-safety violation. IDs follow this model's allocation order; a
   correspondence with CBMC's numbering, including pointer/integer casts, is not
   established. Allocation identity/reuse and provenance need further comparison
   before claiming unbounded loop/recursion compatibility.
@@ -80,8 +200,15 @@ This is a first executable memory model, not full CBMC memory compatibility:
   safety model. CBMC separately confirms the corresponding C memory errors.
   Subobject bounds, alignment, effective types and the other C safety obligations
   still require instrumentation and/or further memory-model work.
-- Value-only globals with constant scalar initialization (including implicit C zero
-  initialization), including local statics, are shared across calls. Global addresses, variable-length arrays and remaining library effects are still unsupported.
+- Ordinary globals/statics with constant scalar, fixed-array, string and struct
+  initializers (including implicit zero initialization) have persistent shared
+  byte objects. They are allocated lazily on first access, retaining identity and
+  contents across calls/returns. This changes allocation order relative to CBMC;
+  numerical pointer identities are not certified. Padding/layout restrictions
+  still apply. Pointer-to-object initializers and nonconstant initializers remain
+  unsupported. CBMC metadata globals retain their value-only representation;
+  taking their addresses is rejected. Const qualification alone does not add a
+  read-only memory check. Variable-length arrays remain unsupported.
 - Pointer object/offset/invalid predicates and live object sizes are implemented.
   Unknown/dead object sizes are unconstrained: discarded extents are not modeled.
   This introduces a universal nondeterministic choice for an unavailable extent;
@@ -135,8 +262,8 @@ limits. Heap failure is always possible, matching CBMC comparisons with
 capacity fails a model check. This does not establish arbitrary allocation-loop
 compatibility. The external stubs do not implement CBMC's allocation failure
 modes/limits or new/delete bookkeeping. Use loaded library bodies for those policies.
-`realloc` and leak-check insertion remain unsupported. These explicit C library models
-do not establish equivalence to every CBMC built-in library implementation. `tests/Calls.lean` includes kernel-checked
+Loaded `realloc` and inserted leak checks are covered below. These explicit C
+library models do not establish equivalence to every CBMC built-in implementation. `tests/Calls.lean` includes kernel-checked
 recursive execution and callee/library failures, plus a general `vcgen` memcpy
 frame proof. General modular function-contract rules and universal parser
 invariants remain proof-interface work.
@@ -161,11 +288,37 @@ therefore witness a deallocated object, while another monitoring choice may miss
 one replay. Successful replay is not universal safety. The external `free` stub instead
 invalidates every freed object; the two paths deliberately expose different models.
 
-`tests/heap-library.c` and `tests/HeapLibrary.lean` exercise the actual loaded bodies:
-roundtrip, allocation failure, calloc zeroing and size overflow, named double-free and
-use-after-free violations, and arbitrary initial bytes. The existing memory runner
-checks these against CBMC and tests no-failure and assert-on-failure policies. This
-is regression evidence, not a proof of full CBMC memory-model correspondence.
+Loaded `realloc` now uses a Lean model of `__CPROVER_array_copy`. It preserves the
+common byte prefix, truncates on shrink, and chooses fresh arbitrary extension bytes
+on growth. This first array-copy slice requires live **base pointers**, not interior
+or subobject views. The unmodified library body handles allocation failure, null,
+zero-size requests and freeing the old object. Logical `&&`/`||` operands with effects
+are evaluated only when needed; shrinking must not read a guarded-away old extent.
+
+`tests/heap-library.c` and `tests/HeapLibrary.lean` cover these cases and named
+counterexamples for stale pointers, assumed-zero extensions and array-copy padding.
+The memory runner compares the C properties against CBMC and audits Lean certificates.
+Positive Lean execution certificates are concrete; they are not universal realloc proofs.
+
+For leak checking, add `--memory-leak-check` during instrumentation and translate
+`__CPROVER__start`, not just the C entry function: CBMC puts the final leak assertion
+in that wrapper. `tests/leaks.c` uses void, argument-free entry functions to avoid the
+startup trace I/O instructions, which remain unsupported. For example:
+
+```sh
+build/bin/goto-cc --function leak_bad tests/leaks.c -o build/memory/leak-raw.gb
+build/bin/goto-instrument --add-library --malloc-may-fail --memory-leak-check \
+  --pointer-check --bounds-check build/memory/leak-raw.gb build/memory/leak.gb
+build/bin/goto-lean build/memory/leak.gb --function __CPROVER__start -o build/memory/Leak.lean
+```
+
+The runner verifies that the actual `__CPROVER__start.memory-leak.1` property was
+inserted. `tests/LeakSafe.lean` certifies a returning whole-program execution;
+`tests/LeakUnsafe.lean` certifies that losing the allocation reaches that property
+and refutes safety. Both explicitly enable the allocation monitor; CBMC separately
+checks the good entry for all choices and finds the leak in the bad one. The two
+startup modules are checked separately because they use the same namespace.
+Successful individual monitoring choices do not establish universal leak freedom.
 
 ## Small positive and negative controls
 
@@ -251,7 +404,7 @@ successful `strlen` and pointer-range assertions.
 
 The unchanged helper/harness can now be translated and executed. A universal
 correctness proof remains to be written. The full command parser still needs
-addressable global storage, more string/numeric library operations and floating point.
+broader static initialization, more string/numeric library operations and floating point.
 **This is not full parser verification.**
 
 

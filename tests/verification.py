@@ -21,7 +21,7 @@ def run(work, mode, *, succeeds=True):
 
 with tempfile.TemporaryDirectory(prefix='verification-', dir=ROOT / 'build') as directory:
     work = Path(directory)
-    for name in ['checks.c', 'Proofs.lean', 'lakefile.toml', 'verification.json']:
+    for name in ['checks.c', 'Proofs.lean', 'Cases.lean', 'lakefile.toml', 'verification.json']:
         shutil.copy2(ROOT / 'examples/checks' / name, work / name)
     source = work / 'checks.c'
     source.write_text('#include "local.h"\n' + source.read_text())
@@ -63,10 +63,12 @@ with tempfile.TemporaryDirectory(prefix='verification-', dir=ROOT / 'build') as 
 
     config = work / 'verification.json'
     original = config.read_bytes()
-    for change in ['macro', 'entry', 'ABI']:
+    for change in ['macro', 'entry', 'ABI', 'object_bits']:
         policy = json.loads(original)
         if change == 'macro':
             policy['compile'].append('-DNEW_CONFIGURATION=1')
+        elif change == 'object_bits':
+            policy['object_bits'] = 12
         elif change == 'ABI':
             policy['compile'].append('--32')
         else:
@@ -82,6 +84,18 @@ with tempfile.TemporaryDirectory(prefix='verification-', dir=ROOT / 'build') as 
         '__CPROVER_assert(result > x, "increment increases the value");', ';'))
     rejected = run(work, 'generate', succeeds=False)
     assert 'property inventory' in rejected.stderr
+    assert not (work / '.lake/verification/result.json').exists()
+    source.write_text(saved_source)
+
+    # Safety can hold vacuously under assume(false); an admitted-input witness cannot.
+    source.write_text(saved_source.replace('__CPROVER_assume(x < INT_MAX);',
+                                          '__CPROVER_assume(0);'))
+    run(work, 'generate')
+    subprocess.run(['lake', 'build', 'Generated.Add'], cwd=work, check=True,
+                   capture_output=True, timeout=120)
+    witness = subprocess.run(['lake', 'env', 'lean', '-j1', '-M1024', 'Cases.lean'],
+                             cwd=work, text=True, capture_output=True, timeout=120)
+    assert witness.returncode != 0 and 'is false' in witness.stdout, witness
     assert not (work / '.lake/verification/result.json').exists()
     source.write_text(saved_source)
 
@@ -109,10 +123,15 @@ with tempfile.TemporaryDirectory(prefix='verification-', dir=ROOT / 'build') as 
     rejected = run(work, 'check', succeeds=False)
     assert 'Type mismatch' in rejected.stderr
     assert not (work / '.lake/verification/result.json').exists()
-    config.write_bytes(original)
+    policy = json.loads(original)
+    policy['object_bits'] = 12
+    config.write_text(json.dumps(policy))
     run(work, 'generate')
     run(work, 'check')
     run(work, 'status')
+    receipt = json.loads((work / '.lake/verification/result.json').read_text())
+    assert receipt['generated']['inputs']['object_bits'] == 12
+    assert '12 object bits' in (work / 'Generated/Add.lean').read_text()
 
 print('PASS receipts: positive checks; stale headers/source/config/Lean/GOTO/proof rejected;')
 print('missing assertions, disabled instrumentation, unknown and wrong-statement claims rejected')

@@ -2,8 +2,9 @@
 
 This example contains the C input, generated Lean, handwritten contracts and
 proofs, and a concrete execution. It needs no sibling repository or custom
-`LEAN_PATH`. `take_word.c` contains the original Cornell `take_word` and
-`copy_word` functions; the small `main` keeps those static functions in the
+`LEAN_PATH`. `take_word.c` contains locally written `take_word` and `copy_word`
+repair helpers from the Cornell serial-assurance experiment; see [attribution](SOURCE.md).
+The small `main` keeps those static functions in the
 GOTO object. The proof selects `take_word` as its entry.
 
 From the goto-lean repository root, build the tools once:
@@ -30,6 +31,14 @@ against the changed program. Handwritten files stay separate from generated file
 The execution copies `hi` from `"  hi there"`, appends NUL, preserves the rest
 of the output buffer, and advances the cursor to byte 5. It also checks the
 result against the proved functional specification.
+
+[`Cases.lean`](Cases.lean) adds twenty named inputs: empty/space-only strings,
+capacity boundaries, multiple words, tabs/newlines and UTF-8 bytes. It proves the
+`Ready` memory premises, NUL termination and a completed execution for every row.
+An ordinary parse failure returns 0; it is not an `assumptionRejected` path.
+`make check` runs the exact same rows against compiled C and compares results,
+cursor offsets, unchanged input and every output byte. These are feasibility and
+differential checks, not complete input coverage.
 
 ## Reading the proof
 

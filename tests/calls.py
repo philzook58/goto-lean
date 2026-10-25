@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / 'build'
 WORK = BUILD / 'calls'
 WORK.mkdir(parents=True, exist_ok=True)
-ENV = dict(os.environ, LEAN_PATH=str(WORK))
+ENV = dict(os.environ, LEAN_PATH=str(WORK), LEAN_NUM_THREADS='1')
 
 
 def run(*args):
@@ -29,14 +29,15 @@ cases = [('nested', [[rng.getrandbits(32)] for _ in range(90)]),
          ('aggregate_call', [[rng.getrandbits(32)] for _ in range(90)]),
          ('factorial', [[n] for n in range(11)]), ('even', [[n] for n in range(21)]),
          ('copy_word', [[x] for x in [0, 1, 256, 65535] +
-          [rng.getrandbits(32) for _ in range(90)]]), ('copy_disjoint', [[]])]
+          [rng.getrandbits(32) for _ in range(90)]]), ('copy_disjoint', [[]]),
+         ('long_called', [[0], [1], [2**32-400]])]
 names = [name for name, _ in cases] + [
-    'callee_bad', 'callee_dead', 'copy_overlap', 'copy_bounds', 'string_bad', 'call_void']
+    'callee_bad', 'callee_dead', 'copy_overlap', 'copy_bounds', 'string_bad', 'call_void', 'long_block']
 modules = {name: ''.join(s.capitalize() for s in name.split('_')) for name in names}
 for name in names:
     path = WORK / f'{modules[name]}.lean'
     run(BUILD / 'bin/goto-lean', WORK / 'calls.gb', '--function', name, '-o', path)
-    run('lake', 'env', 'lean', '-o', path.with_suffix('.olean'), path)
+    run('lake', 'env', 'lean', '-j1', '-M1024', '-o', path.with_suffix('.olean'), path)
 
 run('cc', '-shared', '-fPIC', '-O2', 'tests/calls.c', '-o', WORK / 'native.so')
 lib = ctypes.CDLL(str(WORK / 'native.so'))

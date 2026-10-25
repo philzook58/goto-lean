@@ -121,7 +121,9 @@ run(BUILD / 'bin/goto-instrument', '--add-library', '--malloc-may-fail',
     '--pointer-check', '--bounds-check', WORK / 'heap-library-raw.gb', WORK / 'heap-library.gb')
 library_cases = ['library_roundtrip', 'library_calloc', 'library_calloc_overflow',
                  'library_double_free', 'library_dead', 'primitive_zero',
-                 'primitive_stable', 'primitive_bad', 'primitive_null']
+                 'primitive_stable', 'primitive_bad', 'primitive_null',
+                 'library_realloc', 'library_realloc_null', 'library_realloc_zero',
+                 'library_realloc_bad', 'library_realloc_old', 'copy_padding_bad', 'short_circuit']
 for name in library_cases:
     path = WORK / (''.join(word.capitalize() for word in name.split('_')) + '.lean')
     run(BUILD / 'bin/goto-lean', WORK / 'heap-library.gb', '--function', name, '-o', path)
@@ -148,6 +150,9 @@ if cbmc := shutil.which(os.environ.get('CBMC', 'cbmc')):
         'library_double_free': 'free argument must be NULL or valid pointer',
         'library_dead': 'dereference failure: deallocated dynamic object in *p',
         'primitive_bad': 'arbitrary bytes need not be zero',
+        'library_realloc_bad': 'realloc extension need not be zero',
+        'library_realloc_old': 'dereference failure: deallocated dynamic object in *p',
+        'copy_padding_bad': 'array_copy padding need not retain destination bytes',
     }
     for name in library_cases:
         output = run(cbmc, WORK / 'heap-library.gb', '--function', name,
@@ -160,3 +165,31 @@ if cbmc := shutil.which(os.environ.get('CBMC', 'cbmc')):
         else:
             assert not failures, (name, failures)
     print('PASS CBMC loaded-library and allocation-primitive controls', flush=True)
+
+# The real leak property is in __CPROVER__start, after initialization and the entry call.
+# Separate Lean processes avoid importing two different programs under the same startup namespace.
+for entry, module, proof, leaks in [('leak_good', 'LeakGood', 'LeakSafe', False),
+                                    ('leak_bad', 'LeakBad', 'LeakUnsafe', True)]:
+    raw, checked = WORK / (entry + '-raw.gb'), WORK / (entry + '.gb')
+    run(BUILD / 'bin/goto-cc', '--function', entry, 'tests/leaks.c', '-o', raw)
+    run(BUILD / 'bin/goto-instrument', '--add-library', '--malloc-may-fail',
+        '--memory-leak-check', '--pointer-check', '--bounds-check', raw, checked)
+    properties = json.loads(run(BUILD / 'bin/goto-instrument', '--json-ui',
+                                '--show-properties', checked))
+    leak_ids = [p['name'] for m in properties for p in m.get('properties', [])
+                if p['class'] == 'memory-leak']
+    assert leak_ids == ['__CPROVER__start.memory-leak.1'], leak_ids
+    path = WORK / (module + '.lean')
+    run(BUILD / 'bin/goto-lean', checked, '--function', '__CPROVER__start', '-o', path)
+    run('lake', 'env', 'lean', '-o', path.with_suffix('.olean'), path)
+    print(run('lake', 'env', 'lean', ROOT / 'tests' / (proof + '.lean')).strip(), flush=True)
+    if cbmc := shutil.which(os.environ.get('CBMC', 'cbmc')):
+        output = run(cbmc, checked, '--no-standard-checks', '--json-ui', code=10 if leaks else 0)
+        (WORK / (entry + '-cbmc.json')).write_text(output)
+        failures = [r['property'] for m in json.loads(output) for r in m.get('result', [])
+                    if r['status'] == 'FAILURE']
+        if leaks:
+            assert failures == leak_ids, (entry, failures)
+        else:
+            assert not failures, (entry, failures)
+print('PASS startup leak checks: monitored allocation freed / lost', flush=True)

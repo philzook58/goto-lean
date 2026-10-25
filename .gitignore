@@ -10,5 +10,10 @@ a.out
 
 # Regenerated from C by the example Makefiles. Keep the handwritten import files.
 /examples/*/Generated/
+# One browsable tutorial example; make check regenerates it along with the others.
+!/examples/checks/Generated/
+/examples/checks/Generated/*
+!/examples/checks/Generated/Add.lean
 /examples/arrays/Checked/
 /play/mymax.lean
+/play/build/

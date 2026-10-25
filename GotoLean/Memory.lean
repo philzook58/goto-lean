@@ -45,7 +45,8 @@ structure Memory where
   objects : Array (Option (Array (BitVec 8))) := #[none, none]
   globals : List (String × Nat) := []
   heap : List Nat := [] -- IDs allocated by malloc, including released objects
-  deriving Repr, BEq, DecidableEq
+  staticObjects : List (String × Nat) := []
+  deriving Repr, BEq, DecidableEq, Inhabited
 
 namespace Memory
 
@@ -160,6 +161,15 @@ def alloc (site : Site) (offsetBits objectBits : Nat) (m : Memory) (value : BitV
       (w + 7) / 8 < 2 ^ offsetBits))
   pure (Pointer.make offsetBits m.objects.size 0,
     { m with objects := m.objects.push (some (unpack value)) })
+
+/-- Static storage is initialized once and retains its address across calls and returns. -/
+def staticAddress (site : Site) (offsetBits objectBits : Nat) (m : Memory)
+    (name : String) (initial : BitVec w) : Action (BitVec (offsetBits + objectBits) × Memory) := do
+  match m.staticObjects.lookup name with
+  | some object => pure (Pointer.make offsetBits object 0, m)
+  | none =>
+    let (p, m') ← alloc site offsetBits objectBits m initial
+    pure (p, { m' with staticObjects := (name, Pointer.object offsetBits p) :: m.staticObjects })
 
 def release (m : Memory) (offsetBits : Nat) (p : BitVec w) : Memory :=
   { m with objects := m.objects.setIfInBounds (Pointer.object offsetBits p) none }

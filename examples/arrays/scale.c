@@ -24,6 +24,7 @@ int main(void) {
             if (argument < 0 || (unsigned)argument > n) return 2;
             result = rotate(a, (unsigned)argument, n);
         }
+        else if (!strcmp(op, "reverse")) reverse(a, n);
         else if (!strcmp(op, "sort")) bubble_sort(a, n);
         else return 2;
         if (storage[0] != 12345678 || a[n] != -12345678) return 3;

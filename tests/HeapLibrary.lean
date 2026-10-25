@@ -8,6 +8,13 @@ import PrimitiveZero
 import PrimitiveStable
 import PrimitiveBad
 import PrimitiveNull
+import LibraryRealloc
+import LibraryReallocNull
+import LibraryReallocZero
+import LibraryReallocBad
+import LibraryReallocOld
+import CopyPaddingBad
+import ShortCircuit
 
 /-! Executions of CBMC's loaded library bodies and their imported checks.
 Unlike the external free model, CBMC's body nondeterministically records deallocation;
@@ -99,6 +106,56 @@ theorem arbitrary_is_not_zero : ∃ site,
     ¬ v_primitive_bad.run.wp (fun _ ↦ True) := by
   exact failed _ (fun f ↦ reprStr f.1) _ (zeros.set 2 165) _ (by decide +kernel)
 
+/-- Growing preserves both initialized bytes, including the guarded second-byte assertion. -/
+theorem realloc_grows : ∃ m,
+    Executes v_library_realloc.step (v_library_realloc.initial 1) (.returned (1, m)) := by
+  exact returned _ (fun f ↦ reprStr f.1) _ zeros 1 (by decide +kernel)
+
+/-- Shrinking preserves the retained byte and never evaluates the guarded out-of-bounds read. -/
+theorem realloc_shrinks : ∃ m,
+    Executes v_library_realloc.step (v_library_realloc.initial 0) (.returned (1, m)) := by
+  exact returned _ (fun f ↦ reprStr f.1) _ zeros 1 (by decide +kernel)
+
+/-- Failure of the replacement allocation leaves the original bytes readable and freeable. -/
+theorem realloc_failure : ∃ m,
+    Executes v_library_realloc.step (v_library_realloc.initial 1) (.returned (2, m)) := by
+  exact returned _ (fun f ↦ reprStr f.1) _ (zeros.set 19 1) 2 (by decide +kernel)
+
+#guard returnsValue 1 (v_library_realloc_null.eval 100 zeros).1
+#guard returnsValue 1 (v_library_realloc_zero.eval 100 zeros).1
+#guard returnsValue 0 (v_short_circuit.eval 0 100 zeros).1
+#guard returnsValue 1 (v_short_circuit.eval 1 100 zeros).1
+
+/-- Realloc does not promise to zero its extension. -/
+theorem realloc_extension : ∃ site,
+    hasSuffix "; property library_realloc_bad.assertion.1; realloc extension need not be zero"
+      site = true ∧
+    Executes v_library_realloc_bad.step v_library_realloc_bad.initial (.assertionFailed site) ∧
+    ¬ v_library_realloc_bad.run.wp (fun _ ↦ True) := by
+  exact failed _ (fun f ↦ reprStr f.1) _ (zeros.set 29 1) _ (by decide +kernel)
+
+/-- A successful move makes the old pointer fail the imported deallocation check. -/
+theorem realloc_old_pointer : ∃ site,
+    hasSuffix ("; property library_realloc_old.pointer_dereference.9; " ++
+      "dereference failure: deallocated dynamic object in *p") site = true ∧
+    Executes v_library_realloc_old.step v_library_realloc_old.initial (.assertionFailed site) ∧
+    ¬ v_library_realloc_old.run.wp (fun _ ↦ True) := by
+  exact failed _ (fun f ↦ reprStr f.1) _ (zeros.set 31 1) _ (by decide +kernel)
+
+/-- Copy extension is fresh arbitrary data even when the destination was initialized to zero. -/
+theorem copy_padding : ∃ site,
+    hasSuffix ("; property copy_padding_bad.assertion.2; " ++
+      "array_copy padding need not retain destination bytes") site = true ∧
+    Executes v_copy_padding_bad.step v_copy_padding_bad.initial (.assertionFailed site) ∧
+    ¬ v_copy_padding_bad.run.wp (fun _ ↦ True) := by
+  exact failed _ (fun f ↦ reprStr f.1) _ (zeros.set 2 1) _ (by decide +kernel)
+
+#check_axioms realloc_grows
+#check_axioms realloc_shrinks
+#check_axioms realloc_failure
+#check_axioms realloc_extension
+#check_axioms realloc_old_pointer
+#check_axioms copy_padding
 #check_axioms roundtrip
 #check_axioms malloc_failure
 #check_axioms calloc_zero

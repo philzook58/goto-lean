@@ -53,6 +53,12 @@ LEAN_PATH=build/demo lake env lean --run examples/Run.lean
 imports `GotoLean`, so build the shared library with `lake build` first.
 `LEAN_PATH` makes the generated modules visible to handwritten harnesses.
 
+Use `--object-bits N` on both `goto-lean` and the comparison `cbmc` command when
+changing CBMC's default pointer split. The printer validates it against the input
+pointer width, aligns CBMC's maximum-allocation constant, and records it in the
+header. More object bits leave fewer offset bits. Receipt policies accept an
+optional `"object_bits": N` (default 8); use the same value in separate comparisons.
+
 Each generated namespace is `v_` followed by the sanitized GOTO function name:
 
 ```lean
@@ -83,6 +89,9 @@ uninitialized scalar remains stable between writes. Boolean choices consume
 one bit; C `_Bool` storage retains its CBMC bitvector width.
 
 ## Prove
+
+The [agent proof guide](AGENT_GUIDE.md) maps these APIs to concrete replay,
+universal completion, loop invariants and certified counterexamples.
 
 `run` expresses safety on every finite execution prefix and a postcondition on
 normal returns. It permits divergence. A failed check before divergence still
@@ -209,6 +218,10 @@ handles nested calls, recursion and mutual recursion; C++ does not inline bodies
 Caller continuations receive the callee's updated memory before storing its
 result. Fuel counts blocks across the whole call tree. Functions with ordinary
 calls return `(result, memory)`; call-free scalar/value interfaces are unchanged.
+For bounded modular proofs, import `GotoLean.CallSummary` and compose proved
+callees with `finishes_resume`. `ReturnPost tag Q` lifts a predicate on a typed
+payload (including memory) to the tagged return value; destructure its witness
+at the continuation instead of splitting every return variant.
 
 When external `memcpy` or `strlen` has no GOTO body, the printer emits a call to
 the checked [Lean library model](../GotoLean/Library.lean). Copies check complete
@@ -232,14 +245,11 @@ distances outside CBMC's nonnegative signed-int range are rejected; dynamic
 bitvector counts use their unsigned bit patterns. A proved left-shift helper
 avoids constructing enormous intermediate natural numbers on oversized counts.
 
-Not implemented yet: indirect/variadic calls, unknown external functions,
-dynamic/unbounded arrays, big-endian unions, address-taking of globals,
-nonconstant global/static initialization, floating point, exceptions and concurrency.
-Unsupported features are rejected when reachable. Value-only globals and statics
-with constant scalar initializers are supported across calls. Uses outside a local's
-definite lifetime are rejected. Unrelated functions are not translated. Errors
-identify the function, instruction and available source location. Translation
-finishes before atomically replacing the destination file.
+See [the compatibility inventory](../COMPATIBILITY.md) for supported features and
+remaining gaps. Unsupported features are rejected when reachable; unrelated
+functions are not translated. Errors identify the function, instruction and
+available source location. Translation finishes before atomically replacing the
+destination file.
 
 This memory milestone does not yet translate ASMC's full pointer-based machine
 state. Termination is established for seven array entries under their preconditions;
@@ -284,7 +294,8 @@ and void returns, shared caller objects, 32-bit calls and library models.
 library failures, and use `vcgen` to prove a memcpy frame property.
 
 The [parser experiment](../experiments/parser/run.py) translates the unchanged
-Cornell `take_word` and its existing harness, without inlining or replacing the
+local repair helper `take_word` and its existing harness from the Cornell
+serial-assurance experiment, without inlining or replacing the
 helper. It compares native and Lean results, all 16 output bytes and cursor
 positions on 195 inputs/capacities, including rejected and high-byte inputs.
 [A kernel-checked execution](../experiments/parser/Proofs.lean) certifies a complete
@@ -292,8 +303,9 @@ copy-and-advance case. The same [universal parser proof](../examples/parser/Proo
 is checked against this unchanged external helper as well as the self-contained
 example. It proves success and rejection, including the cursor and memory frame,
 for any NUL-terminated input satisfying its documented 64-bit memory preconditions.
-Run it with `python3 experiments/parser/run.py`; it requires the sibling Cornell
-project. CTest also builds and runs the self-contained example; it does not depend
+Run it with `python3 experiments/parser/run.py`; it requires the sibling local
+experiment. See [source attribution](../examples/parser/SOURCE.md).
+CTest also builds and runs the self-contained example; it does not depend
 on that sibling.
 
 [The paper coverage report](../experiments/paper/RESULTS.md) distinguishes the

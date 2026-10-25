@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Expect the named property to fail in each bug, and all checks to pass in its repair."""
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -18,12 +19,13 @@ cases = [
     ('uninitialized', 'assertion.1'),
     ('loop_bound', 'array_bounds.1'),
 ]
+object_bits = str(json.loads(Path('verification.json').read_text()).get('object_bits', 8))
 for name, kind in cases:
     property_id = f'bug_{name}.{kind}'
     for prefix in ['bug', 'fixed']:
         function = f'{prefix}_{name}'
         command = [os.environ.get('CBMC', 'cbmc'), '.lake/verification/checked.gb',
-                   '--function', function, '--no-standard-checks',
+                   '--function', function, '--object-bits', object_bits, '--no-standard-checks',
                    '--unwind', '6', '--unwinding-assertions', '--trace']
         if prefix == 'bug':
             command += ['--property', property_id]

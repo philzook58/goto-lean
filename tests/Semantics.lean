@@ -4,6 +4,9 @@ import GotoLean
 open GotoLean Std.WP Lean.Order
 set_option experimental.vcgen true
 
+-- Default memory retains the reserved null/invalid slots and all field defaults.
+example : (default : Memory) = {} := rfl
+
 example : ⦃True⦄ (do
     let x ← choose "choice" 8
     assume "bound" (x.toNat < 10)
@@ -26,6 +29,10 @@ example : (choose "choice" 8).eval [] = (.choiceError "choice", []) := by decide
 example : (choose "choice" 8).eval [42, 9] = (.returned 42, [9]) := by decide
 example : (check "bad" false).eval [] = (.assertionFailed "bad", []) := by decide
 example : (assume "pruned" false).eval [] = (.assumptionRejected "pruned", []) := by decide
+example : (Outcome.returned (43 : BitVec 32)).getValue? = some 43 := rfl
+example : ([.assertionFailed "check", .assumptionRejected "assume",
+    .choiceError "choice", .exhausted "block"] : List (Outcome (BitVec 32))).all
+    (fun out ↦ out.getValue? != some 0) = true := by decide
 example : (divide "zero" false false (7 : BitVec 8) 0).eval [99] =
     (.returned 99, []) := by decide
 

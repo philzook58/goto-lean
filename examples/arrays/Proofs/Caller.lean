@@ -107,7 +107,7 @@ private theorem returned (value : BitVec 32) (after : Memory)
     Memory.load_value site after 56 _ value first Q
   have readLast (site : Site) (Q : BitVec 32 → Prop) :=
     Memory.load_value site after 56 _ value last Q
-  simp only [readFirst, readLast]
+  simp [readFirst, readLast, Bind.bind, Action.wp_bind, Action.wp_pure]
   simp [v_fill_local.finish, choose, check, Action.wp, Memory.release,
     Memory.bytes, Memory.setGlobal, pointer, Pointer.object, Pointer.make, shiftLeft_eq]
 

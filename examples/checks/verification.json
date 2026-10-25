@@ -3,7 +3,7 @@
   "compile": ["-std=c11"],
   "checks": ["--bounds-check", "--signed-overflow-check", "--div-by-zero-check", "--undefined-shift-check"],
   "build": ["Proofs"],
-  "proofs": ["Proofs"],
+  "proofs": ["Proofs", "Cases"],
   "expected_properties": {
     "checked_abs": {"overflow": 1, "assertion": 1},
     "checked_add": {"overflow": 1, "assertion": 1},

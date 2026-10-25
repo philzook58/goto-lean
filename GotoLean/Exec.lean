@@ -11,6 +11,16 @@ inductive Outcome (α : Type) where
   | exhausted (block : String)
   deriving Repr, BEq, DecidableEq
 
+/-- Extract a normal return value; every unsuccessful outcome gives `none`. -/
+def Outcome.getValue? : Outcome α → Option α
+  | .returned value => some value
+  | _ => none
+
+/-- Only a normal return witnesses completion with all encountered assumptions admitted. -/
+def Outcome.isReturned : Outcome α → Bool
+  | .returned _ => true
+  | _ => false
+
 /-- A computable predicate for compact, kernel-checked counterexample certificates. -/
 def Outcome.isAssertionFailure : Outcome α → Bool
   | .assertionFailed _ => true
@@ -138,6 +148,20 @@ theorem evalLoop_exec (step : Step σ α) (describe : σ → String) (fuel : Nat
     | assumptionRejected site => exact .rejected hs
     | choiceError site => trivial
     | exhausted block => trivial
+
+/-- Every row whose replay returns has a feasible, completed operational execution. -/
+theorem replay_cases (step : Step σ α) (describe : σ → String) (initial : ι → σ)
+    (cases : List ι) (fuel : Nat) (choices : List Nat)
+    (checked : cases.all (fun c ↦
+      (evalLoop step describe fuel (initial c) choices).1.isReturned) = true) :
+    ∀ c ∈ cases, ∃ result, Executes step (initial c) (.returned result) := by
+  simp only [List.all_eq_true] at checked
+  intro c hc
+  have ok := checked c hc
+  have execution := evalLoop_exec step describe fuel (initial c) choices
+  cases h : (evalLoop step describe fuel (initial c) choices).1 <;>
+    simp [h, Outcome.isReturned] at ok
+  exact ⟨_, by simpa [h, Outcome.Corresponds] using execution⟩
 
 /-- Finite-block safety implies sound concrete results and excludes concrete assertion failures. -/
 theorem evalLoop_sound (step : Step σ α) (describe : σ → String) (fuel : Nat)

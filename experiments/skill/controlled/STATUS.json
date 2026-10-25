@@ -1,0 +1,7 @@
+{
+  "status": "interrupted_by_provider_credits",
+  "verified_requested_proofs": 1,
+  "provider_interrupted": 5,
+  "provider_rejected_before_generation": 12,
+  "comparative_conclusion": "Unavailable; incomplete exposure and provider interruptions prevent guidance comparison."
+}

@@ -1,0 +1,16 @@
+name = "caseStudies"
+defaultTargets = ["Generated", "Proofs.Init"]
+moreLeanArgs = ["-j1", "-M1024"]
+
+[[require]]
+name = "gotoLean"
+path = "../.."
+
+[[lean_lib]]
+name = "Generated"
+
+[[lean_lib]]
+name = "Spec"
+
+[[lean_lib]]
+name = "Proofs"

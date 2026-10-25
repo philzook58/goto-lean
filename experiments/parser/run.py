@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare the unchanged Cornell take_word helper against its generated Lean program."""
+"""Compare the local Cornell-experiment repair helper against its generated Lean program."""
 import ctypes
 import os
 from pathlib import Path
